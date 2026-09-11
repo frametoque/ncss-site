@@ -33,6 +33,7 @@ export function Sidebar() {
     { name: "Magazine", href: "/admin/magazines", icon: BookOpen },
     { name: "Competitions", href: "/admin/competitions", icon: Trophy },
     { name: "Executive Board", href: "/admin/board", icon: Users },
+    { name: "About Content", href: "/admin/about", icon: FileText },
   ];
 
   if (!mounted) return <aside className="w-64 bg-maroon-900 text-white min-h-screen flex flex-col shadow-xl"></aside>;

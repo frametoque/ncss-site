@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { MapPin, Mail, Phone } from "lucide-react";
-
+import pool from "@/lib/db";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,7 +8,14 @@ export const metadata: Metadata = {
   description: "Get in touch with the Nalanda College Science Society for inquiries, collaborations, and event information.",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  let board = [];
+  const res = await pool.query('SELECT name, role, "contactNumber" FROM "executiveBoard" ORDER BY "orderIndex" ASC');
+  board = res.rows;
+  
+  const top3 = board.slice(0, 3);
+  const webAdmin = board.find((m: any) => m.role.toLowerCase().includes('web') || m.role.toLowerCase().includes('admin'));
+
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-2xl mx-auto">
@@ -19,12 +26,12 @@ export default function ContactPage() {
           </p>
         </div>
 
-        <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-gray-100 text-center">
+        <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-gray-100 text-center mb-16">
           <div className="inline-flex items-center justify-center p-4 bg-maroon-50 rounded-full mb-8">
             <Mail className="h-8 w-8 text-maroon-600" />
           </div>
           
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">Contact Information</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-8">General Information</h2>
           
           <ul className="space-y-6 text-gray-600 flex flex-col items-center">
             <li className="flex flex-col items-center gap-2">
@@ -77,6 +84,51 @@ export default function ContactPage() {
               </div>
             </li>
           </ul>
+        </div>
+
+        {/* Direct Contacts Section */}
+        <div className="mb-16">
+          <h2 className="text-3xl font-bold font-heading text-gray-900 mb-8 text-center">Direct Contacts</h2>
+          
+          <div className="grid md:grid-cols-2 gap-4 md:gap-6 mb-12">
+            {/* Top 3 Board */}
+            {top3.map((person: any, i: number) => (
+              <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <p className="font-bold text-gray-900 text-lg">{person.name}</p>
+                  <p className="text-sm text-maroon-600 font-medium">{person.role}</p>
+                </div>
+                {person.contactNumber && (
+                  <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-2 rounded-lg whitespace-nowrap">
+                    <Phone className="h-4 w-4 shrink-0" />
+                    <a href={`tel:${person.contactNumber.replace(/\s+/g, '')}`} className="text-sm hover:text-maroon-600 transition-colors">
+                      {person.contactNumber}
+                    </a>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Web Admin */}
+            {webAdmin && (
+              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <p className="font-bold text-gray-900 text-lg">{webAdmin.name}</p>
+                  <p className="text-sm text-maroon-600 font-medium">{webAdmin.role}</p>
+                </div>
+                {webAdmin.contactNumber && (
+                  <div className="flex flex-col items-start sm:items-end gap-2 text-gray-600">
+                     <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-100 w-full sm:w-auto whitespace-nowrap">
+                       <Phone className="h-4 w-4 shrink-0" />
+                       <a href={`tel:${webAdmin.contactNumber.replace(/\s+/g, '')}`} className="text-sm hover:text-maroon-600 transition-colors truncate">
+                         {webAdmin.contactNumber}
+                       </a>
+                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

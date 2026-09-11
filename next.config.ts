@@ -15,6 +15,16 @@ const nextConfig: NextConfig = {
         hostname: "*.public.blob.vercel-storage.com",
         port: "",
       },
+      {
+        protocol: "https",
+        hostname: "**.fbcdn.net",
+        port: "",
+      },
+      {
+        protocol: "https",
+        hostname: "**.cdninstagram.com",
+        port: "",
+      },
     ],
   },
 };

@@ -20,6 +20,7 @@ export default async function EditBoardMember({ params }: { params: { id: string
       name: formData.get("name") as string,
       role: formData.get("role") as string,
       photoUrl: formData.get("photoUrl"),
+      contactNumber: formData.get("contactNumber") as string,
     });
     redirect("/admin/board");
   }

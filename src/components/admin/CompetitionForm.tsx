@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import Link from "next/link";
+import Image from "next/image";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import RichTextEditor from "./RichTextEditor";
 
@@ -189,9 +190,9 @@ export function CompetitionForm({ initialData, action }: CompetitionFormProps) {
             
             <div className="mt-4 space-y-2">
               <label className="block text-sm font-medium text-maroon-800">Cover Image Preview</label>
-              <div className="w-full max-w-[300px] aspect-video bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner">
+              <div className="w-full aspect-video bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner">
                 {coverPreview ? (
-                  <img src={coverPreview} alt="Cover Preview" className="w-full h-full object-cover" />
+                  <Image src={coverPreview} alt="Cover Preview" fill className="object-cover" />
                 ) : (
                   <span className="text-maroon-300 text-sm">No image</span>
                 )}

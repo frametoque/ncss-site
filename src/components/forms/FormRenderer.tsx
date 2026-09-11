@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { submitPublicForm } from "@/app/form-submit-action";
 import { Upload, X, File as FileIcon, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
 
 export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -211,7 +212,9 @@ export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
                               <div key={idx} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
                                 <div className="w-12 h-12 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center border border-gray-200">
                                   {isImage ? (
-                                    <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-full object-cover" />
+                                    <div className="relative w-full h-full">
+                                      <Image src={URL.createObjectURL(file)} alt={file.name} fill className="object-cover" />
+                                    </div>
                                   ) : (
                                     <FileIcon className="w-6 h-6 text-gray-400" />
                                   )}

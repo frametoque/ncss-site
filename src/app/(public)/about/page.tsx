@@ -12,6 +12,36 @@ export default async function AboutPage() {
   const res = await pool.query('SELECT * FROM "executiveBoard" ORDER BY "orderIndex" ASC');
   const team = res.rows;
 
+  let historyRes, milestoneRes, eventRes, photoRes;
+  try {
+    historyRes = await pool.query('SELECT * FROM "history"');
+    milestoneRes = await pool.query('SELECT * FROM "milestone" ORDER BY "orderIndex" ASC, "year" DESC');
+    eventRes = await pool.query('SELECT * FROM "annualEvent" ORDER BY "orderIndex" ASC');
+    photoRes = await pool.query('SELECT * FROM "photoArchive" ORDER BY "orderIndex" ASC');
+  } catch(e) {
+    historyRes = { rows: [] };
+    milestoneRes = { rows: [] };
+    eventRes = { rows: [] };
+    photoRes = { rows: [] };
+  }
+
+  const ourHistory = historyRes.rows.find((h: any) => h.sectionKey === 'our-history');
+  const magFounder = historyRes.rows.find((h: any) => h.sectionKey === 'magazine-founder');
+  const ourVision = historyRes.rows.find((h: any) => h.sectionKey === 'our-vision');
+  const ourMission = historyRes.rows.find((h: any) => h.sectionKey === 'our-mission');
+
+  const historyTitle = ourHistory?.title || "Our History";
+  const historyContent = ourHistory?.content || "Founded decades ago, the Nalanda College Science Society has grown from a small group of enthusiasts to the premier scientific body within the school.";
+
+  const magTitle = magFounder?.title || "Pulse Quest Magazine";
+  const magContent = magFounder?.content || "Pulse Quest is more than just a magazine; it is a testament to student curiosity.";
+
+  const visionTitle = ourVision?.title || "Our Vision";
+  const visionContent = ourVision?.content || "To inspire and engage students in the wonders of science, technology, engineering, and mathematics (STEM). We strive to bridge the gap between theoretical learning and practical application.";
+
+  const missionTitle = ourMission?.title || "Our Mission";
+  const missionContent = ourMission?.content || "<ul><li>Organizing inter-school and intra-school competitions</li><li>Publishing our monthly science magazine</li><li>Conducting workshops and guest lectures</li><li>Fostering a community of curious minds</li></ul>";
+
   return (
     <div className="container mx-auto px-4 py-16">
       {/* History Section */}
@@ -23,50 +53,149 @@ export default async function AboutPage() {
           </p>
         </div>
 
-        <div className="bg-maroon-50 rounded-3xl p-8 md:p-12 border border-maroon-100">
-          <h2 className="text-2xl font-bold font-heading text-gray-900 mb-6">Our Mission</h2>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <p className="text-gray-700 mb-4">
-                To inspire and engage students in the wonders of science, technology, engineering, and mathematics (STEM). We strive to bridge the gap between theoretical learning and practical application.
-              </p>
+        <div className="bg-maroon-50 rounded-3xl p-8 md:p-12 border border-maroon-100 mb-24">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12 divide-y md:divide-y-0 md:divide-x divide-maroon-200">
+            {/* Vision */}
+            <div className="md:pr-8">
+              <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{visionTitle}</h2>
+              <div 
+                className="text-gray-700 leading-relaxed whitespace-pre-wrap prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1"
+                dangerouslySetInnerHTML={{ __html: visionContent }}
+              />
             </div>
-            <div>
-              <ul className="space-y-3 text-gray-700 list-disc list-inside">
-                <li>Organizing inter-school and intra-school competitions</li>
-                <li>Publishing our monthly science magazine</li>
-                <li>Conducting workshops and guest lectures</li>
-                <li>Fostering a community of curious minds</li>
-              </ul>
+            
+            {/* Mission */}
+            <div className="pt-8 md:pt-0 md:pl-8">
+              <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{missionTitle}</h2>
+              <div 
+                className="text-gray-700 leading-relaxed whitespace-pre-wrap prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1"
+                dangerouslySetInnerHTML={{ __html: missionContent }}
+              />
             </div>
           </div>
         </div>
-      </section>
 
-      {/* Team Section */}
-      <section>
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold font-heading text-gray-900 mb-4">Executive Board</h2>
-          <p className="text-gray-600">Meet the dedicated students leading the society this year.</p>
-        </div>
+        {/* Team Section */}
+        <div className="mb-24">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold font-heading text-gray-900 mb-4">Executive Board</h2>
+            <p className="text-gray-600">Meet the dedicated students leading the society this year.</p>
+          </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {team.map((member) => (
-            <div key={member.id} className="text-center group">
-              <div className="w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full bg-gray-200 mb-4 overflow-hidden border-4 border-white shadow-md relative">
-                {member.photoUrl ? (
-                  <Image src={member.photoUrl} alt={member.name} fill className="object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
-                    Photo
-                  </div>
-                )}
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-8">
+            {team.map((member) => (
+              <div key={member.id} className="text-center group">
+                <div className="w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full bg-gray-200 mb-4 overflow-hidden border-4 border-white shadow-md relative">
+                  {member.photoUrl ? (
+                    <Image src={member.photoUrl} alt={member.name} fill className="object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
+                      Photo
+                    </div>
+                  )}
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">{member.name}</h3>
+                <p className="text-sm font-medium text-maroon-600">{member.role}</p>
               </div>
-              <h3 className="text-lg font-bold text-gray-900">{member.name}</h3>
-              <p className="text-sm font-medium text-maroon-600">{member.role}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
+        {/* History & Milestones */}
+        <div className="grid lg:grid-cols-2 gap-12 mb-24">
+          <div>
+            <h2 className="text-3xl font-bold font-heading text-gray-900 mb-6">{historyTitle}</h2>
+            <div 
+              className="prose prose-gray text-gray-700 whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: historyContent }}
+            />
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold font-heading text-gray-900 mb-6">Milestones</h2>
+            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent">
+              {milestoneRes.rows.map((milestone: any, i: number) => (
+                <div key={milestone.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-maroon-100 text-maroon-600 font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
+                    <div className="w-2 h-2 bg-maroon-600 rounded-full" />
+                  </div>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-gray-100 bg-white shadow-sm">
+                    <div className="text-maroon-600 font-bold text-sm mb-1">{milestone.year}</div>
+                    <h4 className="font-semibold text-gray-900 mb-1">{milestone.title}</h4>
+                    <p className="text-sm text-gray-600">{milestone.description}</p>
+                  </div>
+                </div>
+              ))}
+              {milestoneRes.rows.length === 0 && (
+                <p className="text-gray-500 italic relative z-10 bg-white pl-4">No milestones added yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Annual Events */}
+        <div className="bg-gray-50 rounded-3xl p-8 md:p-12 border border-gray-100 mb-24">
+          <h2 className="text-3xl font-bold font-heading text-gray-900 mb-8 text-center">Annual Events</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {eventRes.rows.map((event: any) => (
+              <div key={event.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{event.title}</h3>
+                <p className="text-gray-600">{event.description}</p>
+              </div>
+            ))}
+            {eventRes.rows.length === 0 && (
+              <p className="text-gray-500 italic text-center md:col-span-3">No annual events added yet.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Pulse Quest Magazine Founder */}
+        <div className="bg-maroon-900 text-white rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12 mb-24 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-maroon-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-1/2 -translate-y-1/2" />
+          <div className="flex-1 relative z-10">
+            <div className="inline-block px-3 py-1 bg-maroon-800 text-maroon-100 rounded-full text-sm font-semibold mb-4 border border-maroon-700">Flagship Publication</div>
+            <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4">{magTitle}</h2>
+            <div 
+              className="text-maroon-100 mb-6 text-lg whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: magContent }}
+            />
+          </div>
+          <div className="w-48 h-48 md:w-64 md:h-64 bg-maroon-950 rounded-2xl shrink-0 flex items-center justify-center border-4 border-maroon-800 relative z-10 shadow-2xl overflow-hidden">
+            {magFounder?.photoUrl ? (
+              <Image src={magFounder.photoUrl} alt="Founder Photo" fill className="object-cover" />
+            ) : (
+              <span className="text-maroon-700 font-medium text-center px-4">Founder Photo / Cover Placeholder</span>
+            )}
+          </div>
+        </div>
+
+        {/* Old Photo Archive */}
+        <div className="mb-24">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold font-heading text-gray-900 mb-4">Old Photo Archive</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">A glimpse into our rich past, cherished memories, and the legacy left behind by previous generations.</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[150px] md:auto-rows-[200px]">
+            {photoRes.rows.map((photo: any, index: number) => {
+              // Create masonry variations based on index
+              let spanClass = "";
+              if (index === 0) spanClass = "col-span-2 row-span-2";
+              else if (index === 2) spanClass = "row-span-2";
+              else if (index === 4) spanClass = "col-span-2";
+              
+              return (
+                <div key={photo.id} className={`bg-gray-100 rounded-2xl relative border border-gray-200 shadow-sm overflow-hidden ${spanClass}`}>
+                  <Image src={photo.photoUrl} alt="Archive Photo" fill className="object-cover" />
+                </div>
+              );
+            })}
+            {photoRes.rows.length === 0 && (
+              <div className="col-span-2 md:col-span-4 text-center text-gray-500 italic py-12">
+                No archive photos added yet.
+              </div>
+            )}
+          </div>
+        </div>
+
       </section>
     </div>
   );

@@ -131,21 +131,23 @@ export async function deleteCompetition(id: string) {
 export async function createExecutiveBoardMember(data: Record<string, any>) {
   const photoUrl = await handleFileUpload(data.photoUrl);
   await pool.query(
-    'INSERT INTO "executiveBoard" (id, name, role, "photoUrl", "orderIndex", "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, now(), now())',
-    [data.name, data.role, photoUrl, data.orderIndex || 0]
+    'INSERT INTO "executiveBoard" (id, name, role, "photoUrl", "orderIndex", "contactNumber", "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, now(), now())',
+    [data.name, data.role, photoUrl, data.orderIndex || 0, data.contactNumber || null]
   );
   revalidatePath("/admin/board");
   revalidatePath("/about");
+  revalidatePath("/contact");
 }
 
 export async function updateExecutiveBoardMember(id: string, data: Record<string, any>) {
   const photoUrl = await handleFileUpload(data.photoUrl);
   await pool.query(
-    'UPDATE "executiveBoard" SET name = $1, role = $2, "photoUrl" = $3, "updatedAt" = now() WHERE id = $4',
-    [data.name, data.role, photoUrl, id]
+    'UPDATE "executiveBoard" SET name = $1, role = $2, "photoUrl" = COALESCE($3, "photoUrl"), "contactNumber" = $4, "updatedAt" = now() WHERE id = $5',
+    [data.name, data.role, photoUrl, data.contactNumber || null, id]
   );
   revalidatePath("/admin/board");
   revalidatePath("/about");
+  revalidatePath("/contact");
 }
 
 export async function deleteExecutiveBoardMember(id: string) {
@@ -189,4 +191,124 @@ export async function updateCompetitionsOrder(orderedIds: string[]) {
   revalidatePath("/admin/competitions");
   revalidatePath("/competitions");
   revalidatePath("/");
+}
+
+// About Page Actions
+
+// History
+export async function updateHistorySection(sectionKey: string, data: Record<string, any>) {
+  const photoUrl = await handleFileUpload(data.photoUrl);
+  await pool.query(
+    `INSERT INTO "history" (id, "sectionKey", title, content, "photoUrl")
+     VALUES (gen_random_uuid()::text, $1, $2, $3, $4)
+     ON CONFLICT ("sectionKey") DO UPDATE 
+     SET title = EXCLUDED.title, content = EXCLUDED.content, "photoUrl" = COALESCE($4, "history"."photoUrl"), "updatedAt" = now()`,
+    [sectionKey, data.title, data.content, photoUrl]
+  );
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+// Milestones
+export async function createMilestone(data: Record<string, any>) {
+  await pool.query(
+    'INSERT INTO "milestone" (id, year, title, description, "orderIndex") VALUES (gen_random_uuid()::text, $1, $2, $3, $4)',
+    [data.year, data.title, data.description, data.orderIndex || 0]
+  );
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+export async function updateMilestone(id: string, data: Record<string, any>) {
+  await pool.query(
+    'UPDATE "milestone" SET year = $1, title = $2, description = $3, "updatedAt" = now() WHERE id = $4',
+    [data.year, data.title, data.description, id]
+  );
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+export async function deleteMilestone(id: string) {
+  await pool.query('DELETE FROM "milestone" WHERE id = $1', [id]);
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+// Annual Events
+export async function createAnnualEvent(data: Record<string, any>) {
+  await pool.query(
+    'INSERT INTO "annualEvent" (id, title, description, "orderIndex") VALUES (gen_random_uuid()::text, $1, $2, $3)',
+    [data.title, data.description, data.orderIndex || 0]
+  );
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+export async function updateAnnualEvent(id: string, data: Record<string, any>) {
+  await pool.query(
+    'UPDATE "annualEvent" SET title = $1, description = $2, "updatedAt" = now() WHERE id = $3',
+    [data.title, data.description, id]
+  );
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+export async function deleteAnnualEvent(id: string) {
+  await pool.query('DELETE FROM "annualEvent" WHERE id = $1', [id]);
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+// Photo Archive
+export async function createPhotoArchive(data: Record<string, any>) {
+  const photoUrl = await handleFileUpload(data.photoUrl);
+  if (!photoUrl) return; // Prevent empty image creations
+  await pool.query(
+    'INSERT INTO "photoArchive" (id, "photoUrl", "orderIndex") VALUES (gen_random_uuid()::text, $1, $2)',
+    [photoUrl, data.orderIndex || 0]
+  );
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+export async function deletePhotoArchive(id: string) {
+  await pool.query('DELETE FROM "photoArchive" WHERE id = $1', [id]);
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+export async function updatePhotoArchiveOrder(orderedIds: string[]) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (let i = 0; i < orderedIds.length; i++) {
+      await client.query('UPDATE "photoArchive" SET "orderIndex" = $1 WHERE id = $2', [i, orderedIds[i]]);
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+export async function updateMilestoneOrder(orderedIds: string[]) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (let i = 0; i < orderedIds.length; i++) {
+      await client.query('UPDATE "milestone" SET "orderIndex" = $1 WHERE id = $2', [i, orderedIds[i]]);
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
 }

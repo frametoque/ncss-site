@@ -5,8 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
 const leftLinks = [
   { name: "Home", href: "/" },
@@ -23,6 +24,30 @@ const rightLinks = [
 // Combine for mobile drawer
 const allLinks = [...leftLinks, ...rightLinks];
 
+function NavItem({ link, pathname }: { link: { name: string; href: string }, pathname: string }) {
+  const isActive = link.href === "/" 
+    ? pathname === "/" 
+    : pathname.startsWith(link.href);
+    
+  return (
+    <Link
+      href={link.href}
+      className={cn(
+        "text-[15px] font-medium transition-all duration-200 hover:text-maroon-600 relative py-2",
+        isActive ? "text-maroon-600 font-semibold" : "text-gray-600"
+      )}
+    >
+      {link.name}
+      {isActive && (
+        <motion.span 
+          layoutId="activeNavUnderline"
+          className="absolute left-0 right-0 -bottom-1 h-0.5 bg-maroon-500 rounded-full" 
+        />
+      )}
+    </Link>
+  );
+}
+
 export function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -37,36 +62,13 @@ export function Navbar() {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
+    // Check initial scroll position
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const isHome = pathname === "/";
-
-  const NavLink = ({ link }: { link: { name: string; href: string } }) => {
-    // For "Home" (/), exact match. For others, startsWith
-    const isActive = link.href === "/" 
-      ? pathname === "/" 
-      : pathname.startsWith(link.href);
-      
-    return (
-      <Link
-        href={link.href}
-        className={cn(
-          "text-[15px] font-medium transition-all duration-200 hover:text-maroon-600 relative py-2",
-          isActive ? "text-maroon-600 font-semibold" : "text-gray-600"
-        )}
-      >
-        {link.name}
-        {isActive && (
-          <motion.span 
-            layoutId="activeNavUnderline"
-            className="absolute left-0 right-0 -bottom-1 h-0.5 bg-maroon-500 rounded-full" 
-          />
-        )}
-      </Link>
-    );
-  };
 
   return (
     <>
@@ -75,6 +77,7 @@ export function Navbar() {
       
       <header className="fixed top-0 inset-x-0 z-50 flex justify-center md:top-6 md:px-6 pointer-events-none">
         <motion.div 
+          layoutRoot
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -88,9 +91,11 @@ export function Navbar() {
           
           {/* Mobile view: Logo left, Menu right */}
           <Link href="/" className="flex items-center md:hidden group h-8 overflow-hidden">
-            <img
+            <Image
               src="/ncss-logo-name-black.png"
               alt="NCSS Logo"
+              width={300}
+              height={100}
               className="h-16 w-auto max-w-none object-contain transition-transform group-hover:scale-105"
             />
           </Link>
@@ -105,65 +110,77 @@ export function Navbar() {
 
           {/* Desktop view: Left Links, Center Logo, Right Links */}
           <div className="hidden md:flex items-center w-full max-w-4xl">
-            {/* Left Links */}
-            <motion.nav 
-              initial={{ x: 60, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="flex-1 flex justify-end items-center gap-8 pr-8"
-            >
-              {leftLinks.map((link) => (
-                <NavLink key={link.name} link={link} />
-              ))}
-            </motion.nav>
+            <LayoutGroup>
+              {/* Left Links */}
+              <motion.nav 
+                initial={{ x: 60, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                className="flex-1 flex justify-end items-center gap-8 pr-8"
+              >
+                {leftLinks.map((link) => (
+                  <NavItem key={link.name} link={link} pathname={pathname} />
+                ))}
+              </motion.nav>
 
-            {/* Center Logo */}
-            <Link href="/" className="flex-shrink-0 group mx-4 hover:scale-[1.03] transition-transform duration-300 relative z-10 flex items-center h-11 overflow-hidden">
-              <img
-                src="/ncss-logo-name-black.png"
-                alt="NCSS Logo"
-                className="h-24 w-auto max-w-none object-contain"
-              />
-            </Link>
+              {/* Center Logo */}
+              <Link href="/" className="flex-shrink-0 group mx-4 hover:scale-[1.03] transition-transform duration-300 relative z-10 flex items-center h-11 overflow-hidden">
+                <Image
+                  src="/ncss-logo-name-black.png"
+                  alt="NCSS Logo"
+                  width={300}
+                  height={100}
+                  className="h-24 w-auto max-w-none object-contain"
+                />
+              </Link>
 
-            {/* Right Links */}
-            <motion.nav 
-              initial={{ x: -60, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="flex-1 flex justify-start items-center gap-8 pl-8"
-            >
-              {rightLinks.map((link) => (
-                <NavLink key={link.name} link={link} />
-              ))}
-            </motion.nav>
+              {/* Right Links */}
+              <motion.nav 
+                initial={{ x: -60, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                className="flex-1 flex justify-start items-center gap-8 pl-8"
+              >
+                {rightLinks.map((link) => (
+                  <NavItem key={link.name} link={link} pathname={pathname} />
+                ))}
+              </motion.nav>
+            </LayoutGroup>
           </div>
         </motion.div>
 
         {/* Mobile Drawer */}
-        {isOpen && (
-          <div className="md:hidden absolute top-16 left-0 w-full bg-white/95 backdrop-blur-xl border-b border-gray-200 shadow-xl animate-in slide-in-from-top-2 pointer-events-auto">
-            <nav className="flex flex-col p-4 space-y-2">
-              {allLinks.map((link) => {
-                const isActive = link.href === "/" 
-                  ? pathname === "/" 
-                  : pathname.startsWith(link.href);
-                return (
-                  <Link
-                    key={link.name}
-                    href={link.href}
-                    className={cn(
-                      "text-lg font-medium px-4 py-3 rounded-2xl transition-colors",
-                      isActive ? "bg-maroon-50 text-maroon-600" : "text-gray-700 hover:bg-gray-50 hover:text-maroon-600"
-                    )}
-                  >
-                    {link.name}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-        )}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="md:hidden absolute top-16 left-0 w-full bg-white/95 backdrop-blur-xl border-b border-gray-200 shadow-xl pointer-events-auto overflow-hidden"
+            >
+              <nav className="flex flex-col p-4 space-y-2">
+                {allLinks.map((link) => {
+                  const isActive = link.href === "/" 
+                    ? pathname === "/" 
+                    : pathname.startsWith(link.href);
+                  return (
+                    <Link
+                      key={link.name}
+                      href={link.href}
+                      className={cn(
+                        "text-lg font-medium px-4 py-3 rounded-2xl transition-colors",
+                        isActive ? "bg-maroon-50 text-maroon-600" : "text-gray-700 hover:bg-gray-50 hover:text-maroon-600"
+                      )}
+                    >
+                      {link.name}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
     </>
   );

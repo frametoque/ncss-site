@@ -21,7 +21,6 @@ export default async function FormsList() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-maroon-900">Forms</h1>
-          <p className="text-maroon-700/70 mt-2">Manage all custom forms and view their submissions.</p>
         </div>
         <Link 
           href="/admin/forms/new" 

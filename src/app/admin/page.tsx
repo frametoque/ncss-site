@@ -56,7 +56,6 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-maroon-900">Dashboard Overview</h1>
-        <p className="text-maroon-700/70 mt-2">Manage all the content on your website from here.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export function HeroLogo() {
   return (
     <div className="relative flex justify-center items-center w-full h-[220px] mb-8">
@@ -32,17 +34,21 @@ export function HeroLogo() {
       {/* Static Logo Wrapper */}
       <div className="relative z-10 w-[150px] h-[150px]">
         {/* Base Logo */}
-        <img 
+        <Image 
           src="/ncss-logo.png" 
           alt="NCSS Logo" 
+          width={300}
+          height={300}
           className="w-full h-full object-contain drop-shadow-[0_10px_15px_rgba(122,12,46,0.2)]"
           style={{ transform: "scale(1.2)", transformOrigin: "center" }}
         />
         
         {/* Sweeping Shine Overlay */}
-        <img 
+        <Image 
           src="/ncss-logo.png" 
           alt="" 
+          width={300}
+          height={300}
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-contain pointer-events-none mix-blend-screen opacity-90"
           style={{ 

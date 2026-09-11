@@ -28,7 +28,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
         // Fired after the upload is complete
-        console.log('Upload completed', blob.url);
+        // Log removed for production
       },
     });
 

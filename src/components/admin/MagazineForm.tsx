@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import Link from "next/link";
+import Image from "next/image";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 
@@ -245,29 +246,32 @@ export function MagazineForm({ initialData, action }: MagazineFormProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-maroon-800 mb-2">Cover Thumbnail</label>
-            <div className="w-48 aspect-[3/4] bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden flex items-center justify-center relative">
+            <label className="block text-sm font-medium text-maroon-800 mb-2">Thumbnail Preview</label>
+            <div className="w-full aspect-[3/4] bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner">
               {thumbnailPreview ? (
-                <img src={thumbnailPreview} alt="Cover Preview" className="w-full h-full object-cover" />
+                <Image src={thumbnailPreview} alt="Cover Preview" fill className="object-cover" />
               ) : (
-                <span className="text-maroon-300 text-sm">Upload PDF first</span>
+                <span className="text-maroon-300 text-sm">No image</span>
               )}
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 mt-6">
             <label htmlFor="outNowImage" className="block text-sm font-medium text-maroon-800">Out Now Promo Image</label>
             <input
               type="file"
               accept="image/png, image/jpeg, image/webp"
               id="outNowImage"
               name="outNowImage"
-              onChange={handleOutNowChange}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                setOutNowPreview(file ? URL.createObjectURL(file) : (initialData?.outNowImage || null));
+              }}
               className="w-full px-4 py-2 border border-maroon-200 rounded-lg focus:ring-maroon-500 focus:border-maroon-500"
             />
-            <div className="w-48 aspect-[3/4] bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden mt-4 relative flex items-center justify-center">
+            <div className="w-full aspect-video mt-2 bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner">
               {outNowPreview ? (
-                <img src={outNowPreview} alt="Promo Preview" className="w-full h-full object-contain" />
+                <Image src={outNowPreview} alt="Promo Preview" fill className="object-contain" />
               ) : (
                 <span className="text-maroon-300 text-sm">No image</span>
               )}

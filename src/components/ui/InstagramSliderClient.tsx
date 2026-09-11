@@ -2,6 +2,8 @@
 
 import { useRef, useState, useEffect } from "react";
 
+import Image from "next/image";
+
 const InstagramIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
@@ -86,10 +88,12 @@ export function InstagramSliderClient({ posts }: { posts: any[] }) {
               onClick={() => setSelectedPost(post)}
               className="relative h-[280px] sm:h-[360px] flex-shrink-0 snap-center sm:snap-start rounded-none overflow-hidden group/post shadow-sm hover:shadow-xl transition-all duration-300 bg-gray-100 cursor-pointer"
             >
-              <img 
+              <Image 
                 src={(('thumbnail_url' in post && post.thumbnail_url) ? post.thumbnail_url : post.media_url) as string} 
                 alt="Instagram Post" 
                 loading="lazy"
+                width={320}
+                height={320}
                 className="h-full w-auto min-w-[200px] object-cover transition-transform duration-700 group-hover/post:scale-110" 
               />
               <div className="absolute inset-0 bg-black/0 group-hover/post:bg-black/40 transition-colors duration-300 flex items-center justify-center">
@@ -140,9 +144,11 @@ export function InstagramSliderClient({ posts }: { posts: any[] }) {
 
             {/* Image Section */}
             <div className="flex-1 bg-black flex items-center justify-center min-h-[300px] md:min-h-0 relative">
-              <img 
+              <Image 
                 src={(('thumbnail_url' in selectedPost && selectedPost.thumbnail_url) ? selectedPost.thumbnail_url : selectedPost.media_url) as string} 
                 alt="Instagram Post Content" 
+                width={800}
+                height={800}
                 className="w-full h-full object-contain max-h-[50vh] md:max-h-[85vh]"
               />
             </div>
@@ -153,7 +159,7 @@ export function InstagramSliderClient({ posts }: { posts: any[] }) {
               <div className="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 p-0.5">
-                    <img src="/ig-dp.jpg" alt="DP" className="w-full h-full rounded-full object-cover border-2 border-white" />
+                    <Image src="/ig-dp.jpg" alt="DP" width={40} height={40} className="w-full h-full rounded-full object-cover border-2 border-white" />
                   </div>
                   <a href="https://www.instagram.com/nalanda_science_society" target="_blank" rel="noopener noreferrer" className="font-semibold text-sm hover:underline">
                     nalanda_science_society

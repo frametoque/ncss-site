@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import Link from "next/link";
+import Image from "next/image";
 
 import { useRef } from "react";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
@@ -271,7 +272,7 @@ export function PostForm({ initialData, categories, authors, action }: PostFormP
             <label className="block text-sm font-medium text-maroon-800 mb-2">Image Preview</label>
             <div className="w-full aspect-square bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner">
               {imagePreview ? (
-                <img src={imagePreview} alt="Cover Preview" className="w-full h-full object-cover" />
+                <Image src={imagePreview} alt="Cover Preview" fill className="object-cover" />
               ) : (
                 <span className="text-maroon-300 text-sm">No image</span>
               )}

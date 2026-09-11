@@ -139,7 +139,7 @@ export default async function Home() {
                   <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white hover:shadow-lg transition-shadow flex flex-col h-full">
                     <div className="w-full relative shrink-0 bg-gray-50 overflow-hidden">
                       {post.coverImage ? (
-                        <img src={post.coverImage} alt={post.title} className="w-full h-auto block transition-transform duration-500 group-hover:scale-105" />
+                        <Image src={post.coverImage} alt={post.title} width={800} height={600} className="w-full h-auto block transition-transform duration-500 group-hover:scale-105" />
                       ) : (
                         <div className="w-full aspect-square flex items-center justify-center text-gray-400">
                           Cover Image

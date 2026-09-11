@@ -89,6 +89,10 @@ export function BoardForm({ initialData, action }: BoardFormProps) {
             <label htmlFor="role" className="block text-sm font-medium text-maroon-800">Role</label>
             <input type="text" id="role" name="role" defaultValue={initialData?.role} required className="w-full px-4 py-2 border border-maroon-200 rounded-lg focus:ring-maroon-500 focus:border-maroon-500" />
           </div>
+          <div className="space-y-2 md:col-span-2">
+            <label htmlFor="contactNumber" className="block text-sm font-medium text-maroon-800">Contact Number (Optional)</label>
+            <input type="text" id="contactNumber" name="contactNumber" defaultValue={initialData?.contactNumber} className="w-full px-4 py-2 border border-maroon-200 rounded-lg focus:ring-maroon-500 focus:border-maroon-500" placeholder="+94 7X XXX XXXX" />
+          </div>
         </div>
 
         <div className="space-y-2">
