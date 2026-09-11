@@ -151,11 +151,11 @@ export default async function AboutPage() {
         {/* Pulse Quest Magazine Founder */}
         <div className="bg-maroon-900 text-white rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12 mb-24 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-maroon-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-1/2 -translate-y-1/2" />
-          <div className="flex-1 relative z-10">
+          <div className="flex-1 relative z-10 min-w-0">
             <div className="inline-block px-3 py-1 bg-maroon-800 text-maroon-100 rounded-full text-sm font-semibold mb-4 border border-maroon-700">Flagship Publication</div>
-            <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4">{magTitle}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4 truncate">{magTitle}</h2>
             <div 
-              className="text-maroon-100 mb-6 text-lg whitespace-pre-wrap"
+              className="text-maroon-100 mb-6 text-lg prose prose-invert max-w-none prose-p:leading-relaxed break-words"
               dangerouslySetInnerHTML={{ __html: magContent }}
             />
           </div>
