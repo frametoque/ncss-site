@@ -5,87 +5,166 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
-const navLinks = [
+import { motion } from "framer-motion";
+
+const leftLinks = [
+  { name: "Home", href: "/" },
   { name: "News", href: "/news" },
-  { name: "Publications", href: "/publications" },
   { name: "Competitions", href: "/competitions" },
+];
+
+const rightLinks = [
+  { name: "Magazine", href: "/magazine" },
   { name: "About", href: "/about" },
   { name: "Contact", href: "/contact" },
 ];
+
+// Combine for mobile drawer
+const allLinks = [...leftLinks, ...rightLinks];
 
 export function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = React.useState(false);
 
-  // Close drawer on route change
+  const [isScrolled, setIsScrolled] = React.useState(false);
+
   React.useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
 
-  return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md">
-      <div className="container mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center group">
-          <img 
-            src="/ncss-logo-name.webp" 
-            alt="NCSS Logo" 
-            className="h-9 md:h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]" 
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const isHome = pathname === "/";
+
+  const NavLink = ({ link }: { link: { name: string; href: string } }) => {
+    // For "Home" (/), exact match. For others, startsWith
+    const isActive = link.href === "/" 
+      ? pathname === "/" 
+      : pathname.startsWith(link.href);
+      
+    return (
+      <Link
+        href={link.href}
+        className={cn(
+          "text-[15px] font-medium transition-all duration-200 hover:text-maroon-600 relative py-2",
+          isActive ? "text-maroon-600 font-semibold" : "text-gray-600"
+        )}
+      >
+        {link.name}
+        {isActive && (
+          <motion.span 
+            layoutId="activeNavUnderline"
+            className="absolute left-0 right-0 -bottom-1 h-0.5 bg-maroon-500 rounded-full" 
           />
-        </Link>
+        )}
+      </Link>
+    );
+  };
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
-            return (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-maroon-600",
-                  isActive ? "text-maroon-500 font-semibold" : "text-gray-600"
-                )}
-              >
-                {link.name}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Mobile Toggle */}
-        <button
-          className="md:hidden p-2 text-gray-600 hover:text-maroon-500 transition-colors"
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle menu"
+  return (
+    <>
+      {/* Spacer to prevent content from going under the fixed header on non-hero pages */}
+      {!isHome && <div className="h-16 md:h-28 w-full" />}
+      
+      <header className="fixed top-0 inset-x-0 z-50 flex justify-center md:top-6 md:px-6 pointer-events-none">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className={cn(
+            "w-full md:w-auto md:min-w-[800px] pointer-events-auto transition-all duration-500 flex items-center justify-between md:justify-center h-16 md:h-20 px-4 md:px-12 relative",
+            isScrolled || !isHome
+              ? "bg-white/70 backdrop-blur-3xl backdrop-saturate-150 border-b md:border border-white/20 md:rounded-2xl shadow-lg md:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
+              : "bg-transparent border-transparent shadow-none"
+          )}
         >
-          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </div>
+          
+          {/* Mobile view: Logo left, Menu right */}
+          <Link href="/" className="flex items-center md:hidden group h-8 overflow-hidden">
+            <img
+              src="/ncss-logo-name-black.png"
+              alt="NCSS Logo"
+              className="h-16 w-auto max-w-none object-contain transition-transform group-hover:scale-105"
+            />
+          </Link>
+          
+          <button
+            className="md:hidden p-2 -mr-2 text-gray-600 hover:text-maroon-500 transition-colors"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
 
-      {/* Mobile Drawer */}
-      {isOpen && (
-        <div className="md:hidden absolute top-16 left-0 w-full bg-white border-b border-gray-200 shadow-lg animate-in slide-in-from-top-4">
-          <nav className="flex flex-col p-4 space-y-4">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
-              return (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className={cn(
-                    "text-lg font-medium px-4 py-2 rounded-xl transition-colors",
-                    isActive ? "bg-maroon-50 text-maroon-600" : "text-gray-600 hover:bg-gray-50"
-                  )}
-                >
-                  {link.name}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      )}
-    </header>
+          {/* Desktop view: Left Links, Center Logo, Right Links */}
+          <div className="hidden md:flex items-center w-full max-w-4xl">
+            {/* Left Links */}
+            <motion.nav 
+              initial={{ x: 60, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="flex-1 flex justify-end items-center gap-8 pr-8"
+            >
+              {leftLinks.map((link) => (
+                <NavLink key={link.name} link={link} />
+              ))}
+            </motion.nav>
+
+            {/* Center Logo */}
+            <Link href="/" className="flex-shrink-0 group mx-4 hover:scale-[1.03] transition-transform duration-300 relative z-10 flex items-center h-11 overflow-hidden">
+              <img
+                src="/ncss-logo-name-black.png"
+                alt="NCSS Logo"
+                className="h-24 w-auto max-w-none object-contain"
+              />
+            </Link>
+
+            {/* Right Links */}
+            <motion.nav 
+              initial={{ x: -60, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="flex-1 flex justify-start items-center gap-8 pl-8"
+            >
+              {rightLinks.map((link) => (
+                <NavLink key={link.name} link={link} />
+              ))}
+            </motion.nav>
+          </div>
+        </motion.div>
+
+        {/* Mobile Drawer */}
+        {isOpen && (
+          <div className="md:hidden absolute top-16 left-0 w-full bg-white/95 backdrop-blur-xl border-b border-gray-200 shadow-xl animate-in slide-in-from-top-2 pointer-events-auto">
+            <nav className="flex flex-col p-4 space-y-2">
+              {allLinks.map((link) => {
+                const isActive = link.href === "/" 
+                  ? pathname === "/" 
+                  : pathname.startsWith(link.href);
+                return (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className={cn(
+                      "text-lg font-medium px-4 py-3 rounded-2xl transition-colors",
+                      isActive ? "bg-maroon-50 text-maroon-600" : "text-gray-700 hover:bg-gray-50 hover:text-maroon-600"
+                    )}
+                  >
+                    {link.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        )}
+      </header>
+    </>
   );
 }

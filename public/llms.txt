@@ -1,0 +1,14 @@
+# Nalanda College Science Society (NCSS)
+
+This the official website of the Nalanda College Science Society.
+It provides news, updates, magazines, and competition registrations for students.
+
+## Key Information
+- Organization: Nalanda College Science Society
+- Website: https://ncsciencesociety.com
+- Email: info@ncsciencesociety.com
+
+## Main Sections
+- News & Updates
+- Competitions
+- Magazine

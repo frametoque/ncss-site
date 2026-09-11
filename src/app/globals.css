@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-maroon-50: #FEF3F2;
-  --color-maroon-100: #F9E0DF;
-  --color-maroon-200: #F2B8B5;
-  --color-maroon-300: #EA8B86;
-  --color-maroon-400: #E05A52;
-  --color-maroon-500: #D23229;
-  --color-maroon-600: #B82820;
-  --color-maroon-700: #982019;
-  --color-maroon-800: #7A1B16;
-  --color-maroon-900: #651814;
+  --color-maroon-50: #fcf3f3;
+  --color-maroon-100: #fae4e4;
+  --color-maroon-200: #f4c3c3;
+  --color-maroon-300: #ec9797;
+  --color-maroon-400: #df5d5d;
+  --color-maroon-500: #c12a2a;
+  --color-maroon-600: #a32020;
+  --color-maroon-700: #800000;
+  --color-maroon-800: #660000;
+  --color-maroon-900: #4d0000;
   
   --color-background: #FAFAFA;
   --color-foreground: #1A1A1A;
   
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-bricolage);
   --font-heading: var(--font-bricolage);
 }
 
@@ -38,4 +38,21 @@ h1, h2, h3, h4, h5, h6 {
 ::selection {
   background-color: var(--color-maroon-200);
   color: var(--color-maroon-900);
+}
+
+/* Custom Scrollbar */
+html {
+  scrollbar-color: var(--color-maroon-600) transparent;
+}
+
+/* Global Image Protection */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }

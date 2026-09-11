@@ -1,13 +1,6 @@
 import type { Metadata } from "next";
-import { Inter, Bricolage_Grotesque } from "next/font/google";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
 
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -15,9 +8,29 @@ const bricolage = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Nalanda College Science Society",
-  description: "Official website of the Nalanda College Science Society (NCSS).",
+  title: {
+    template: "%s | Nalanda College Science Society",
+    default: "Nalanda College Science Society",
+  },
+  description: "Official website of the Nalanda College Science Society (NCSS). Fostering scientific inquiry, critical thinking, and innovation among students since its inception.",
+  keywords: ["Nalanda College", "Science Society", "NCSS", "Science", "Students", "Sri Lanka", "Education"],
+  openGraph: {
+    title: "Nalanda College Science Society",
+    description: "Official website of the Nalanda College Science Society (NCSS).",
+    url: "https://ncss.lk",
+    siteName: "NCSS",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Nalanda College Science Society",
+    description: "Official website of the Nalanda College Science Society (NCSS).",
+  },
 };
+
+import { SmoothScroller } from "@/components/animations/SmoothScroller";
+import { ImageProtector } from "@/components/ui/ImageProtector";
 
 export default function RootLayout({
   children,
@@ -25,11 +38,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${bricolage.variable}`}>
+    <html lang="en" className={`${bricolage.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
-        <Navbar />
+        <SmoothScroller />
+        <ImageProtector />
         <main className="flex-1">{children}</main>
-        <Footer />
       </body>
     </html>
   );
