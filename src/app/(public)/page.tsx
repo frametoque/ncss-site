@@ -137,11 +137,11 @@ export default async function Home() {
               <StaggerItem key={post.id} className="h-full">
                 <Link href={`/news/${post.slug}`} className="group flex flex-col h-full">
                   <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white hover:shadow-lg transition-shadow flex flex-col h-full">
-                    <div className="aspect-square bg-gray-200 w-full relative shrink-0">
+                    <div className="w-full relative shrink-0 bg-gray-50 overflow-hidden">
                       {post.coverImage ? (
-                        <Image src={post.coverImage} alt={post.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <img src={post.coverImage} alt={post.title} className="w-full h-auto block transition-transform duration-500 group-hover:scale-105" />
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                        <div className="w-full aspect-square flex items-center justify-center text-gray-400">
                           Cover Image
                         </div>
                       )}
