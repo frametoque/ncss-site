@@ -172,7 +172,7 @@ export default async function AboutPage() {
         <div className="mb-24">
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold font-heading text-gray-900 mb-4">Old Photo Archive</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">A glimpse into our rich past, cherished memories, and the legacy left behind by previous generations.</p>
+            <p className="text-gray-600 max-w-2xl mx-auto">A glimpse into our rich past, memories, and the legacy left behind by previous generations.</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[150px] md:auto-rows-[200px]">
             {photoRes.rows.map((photo: any, index: number) => {

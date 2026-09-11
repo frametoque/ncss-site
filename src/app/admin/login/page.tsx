@@ -19,9 +19,6 @@ export default function LoginPage() {
         <h2 className="mt-6 text-center text-3xl font-extrabold font-heading text-gray-900">
           Admin Dashboard
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Sign in to access NCSS control panel
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">

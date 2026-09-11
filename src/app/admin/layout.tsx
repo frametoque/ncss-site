@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Sidebar } from "@/components/admin/Sidebar";
+import { AdminLayoutWrapper } from "./AdminLayoutWrapper";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -11,12 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-screen bg-white">
-      <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
-        {children}
-      </main>
-    </div>
-  );
+  return <AdminLayoutWrapper>{children}</AdminLayoutWrapper>;
 }
