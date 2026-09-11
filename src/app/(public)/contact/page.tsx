@@ -2,6 +2,9 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Mail, Phone } from "lucide-react";
 import pool from "@/lib/db";
 import { Metadata } from "next";
+import { SlideUp } from "@/components/animations/SlideUp";
+import { FadeIn } from "@/components/animations/FadeIn";
+import { StaggerContainer, StaggerItem } from "@/components/animations/StaggerGroup";
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -19,14 +22,14 @@ export default async function ContactPage() {
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-16">
+        <SlideUp className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold font-heading text-gray-900 mb-6">Get in Touch</h1>
           <p className="text-lg text-gray-600">
             Have a question about our events, want to contribute to the magazine, or interested in sponsoring? We'd love to hear from you.
           </p>
-        </div>
+        </SlideUp>
 
-        <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-gray-100 text-center mb-16">
+        <FadeIn className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-gray-100 text-center mb-16">
           <div className="inline-flex items-center justify-center p-4 bg-maroon-50 rounded-full mb-8">
             <Mail className="h-8 w-8 text-maroon-600" />
           </div>
@@ -84,16 +87,18 @@ export default async function ContactPage() {
               </div>
             </li>
           </ul>
-        </div>
+        </FadeIn>
 
         {/* Direct Contacts Section */}
         <div className="mb-16">
-          <h2 className="text-3xl font-bold font-heading text-gray-900 mb-8 text-center">Direct Contacts</h2>
+          <SlideUp>
+            <h2 className="text-3xl font-bold font-heading text-gray-900 mb-8 text-center">Direct Contacts</h2>
+          </SlideUp>
           
-          <div className="grid md:grid-cols-2 gap-4 md:gap-6 mb-12">
+          <StaggerContainer className="grid md:grid-cols-2 gap-4 md:gap-6 mb-12">
             {/* Top 3 Board */}
             {top3.map((person: any, i: number) => (
-              <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <StaggerItem key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <p className="font-bold text-gray-900 text-lg">{person.name}</p>
                   <p className="text-sm text-maroon-600 font-medium">{person.role}</p>
@@ -106,12 +111,12 @@ export default async function ContactPage() {
                     </a>
                   </div>
                 )}
-              </div>
+              </StaggerItem>
             ))}
 
             {/* Web Admin */}
             {webAdmin && (
-              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <StaggerItem className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <p className="font-bold text-gray-900 text-lg">{webAdmin.name}</p>
                   <p className="text-sm text-maroon-600 font-medium">{webAdmin.role}</p>
@@ -126,9 +131,9 @@ export default async function ContactPage() {
                      </div>
                   </div>
                 )}
-              </div>
+              </StaggerItem>
             )}
-          </div>
+          </StaggerContainer>
         </div>
       </div>
     </div>

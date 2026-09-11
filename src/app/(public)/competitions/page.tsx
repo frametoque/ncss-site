@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Users, MapPin, Trophy } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { SlideUp } from "@/components/animations/SlideUp";
+import { StaggerContainer, StaggerItem } from "@/components/animations/StaggerGroup";
 
 import pool from "@/lib/db";
 import { Metadata } from "next";
@@ -18,18 +20,18 @@ export default async function CompetitionsPage() {
 
   return (
     <div className="container mx-auto px-4 py-16">
-      <div className="text-center max-w-2xl mx-auto mb-16">
+      <SlideUp className="text-center max-w-2xl mx-auto mb-16">
         <h1 className="text-4xl md:text-5xl font-bold font-heading text-gray-900 mb-6">Competitions</h1>
         <p className="text-lg text-gray-600">
           Participate in our competitions to challenge yourself, meet fellow science enthusiasts, and win exciting prizes.
         </p>
-      </div>
+      </SlideUp>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {competitions.map((comp) => {
           const ended = isCompetitionEnded(comp);
           return (
-            <div key={comp.id} className={`bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full ${ended ? 'opacity-80' : ''}`}>
+            <StaggerItem key={comp.id} className={`bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full ${ended ? 'opacity-80' : ''}`}>
               {/* 1:1 Image Thumbnail */}
               <Link href={`/competitions/${comp.slug}`} className={`block w-full aspect-square bg-gray-100 rounded-xl mb-5 flex-shrink-0 flex items-center justify-center border border-gray-200 overflow-hidden relative group-hover:opacity-90 transition-opacity`}>
                 {comp.coverImage ? (
@@ -69,10 +71,10 @@ export default async function CompetitionsPage() {
                   </Link>
                 </div>
               </div>
-            </div>
+            </StaggerItem>
           );
         })}
-      </div>
+      </StaggerContainer>
     </div>
   );
 }

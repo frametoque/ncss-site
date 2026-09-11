@@ -1,6 +1,7 @@
 import pool from "@/lib/db";
 import { Metadata } from "next";
 import { NewsClient } from "./NewsClient";
+import { SlideUp } from "@/components/animations/SlideUp";
 
 export const metadata: Metadata = {
   title: "News",
@@ -18,12 +19,12 @@ export default async function NewsPage() {
 
   return (
     <div className="container mx-auto px-4 py-16">
-      <div className="text-center max-w-2xl mx-auto mb-12">
+      <SlideUp className="text-center max-w-2xl mx-auto mb-12">
         <h1 className="text-4xl md:text-5xl font-bold font-heading text-gray-900 mb-6">News</h1>
         <p className="text-lg text-gray-600">
           Explore articles, research papers, and event recaps written by our members and guest contributors.
         </p>
-      </div>
+      </SlideUp>
 
       <NewsClient initialPosts={news} categories={categories} />
     </div>

@@ -8,6 +8,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { StaggerContainer, StaggerItem } from "@/components/animations/StaggerGroup";
+import { SlideUp } from "@/components/animations/SlideUp";
 
 export function NewsClient({ initialPosts, categories }: { initialPosts: any[], categories: string[] }) {
   const [search, setSearch] = useState("");
@@ -22,7 +23,7 @@ export function NewsClient({ initialPosts, categories }: { initialPosts: any[], 
 
   return (
     <>
-      <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-12 border-b border-gray-100 pb-6">
+      <SlideUp delay={0.1} className="flex flex-col md:flex-row justify-center items-center gap-6 mb-12 border-b border-gray-100 pb-6">
         <div className="flex flex-wrap justify-center gap-2 overflow-x-auto w-full md:w-auto scrollbar-hide">
           <button 
             onClick={() => setSelectedCategory("All")}
@@ -49,7 +50,7 @@ export function NewsClient({ initialPosts, categories }: { initialPosts: any[], 
             className="px-5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-maroon-500 w-full md:w-72 bg-gray-50/50 shadow-sm text-sm transition-all focus:bg-white"
           />
         </div>
-      </div>
+      </SlideUp>
 
       <StaggerContainer key={selectedCategory + search} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
         {filteredPosts.length > 0 ? filteredPosts.map((post) => (
