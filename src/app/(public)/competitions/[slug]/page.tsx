@@ -11,7 +11,7 @@ type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const res = await pool.query('SELECT title, description FROM "competition" WHERE slug = $1', [slug]);
+  const res = await pool.query('SELECT title, description, "coverImage" FROM "competition" WHERE slug = $1', [slug]);
   if (res.rows.length === 0) return {};
   const comp = res.rows[0];
 
@@ -21,6 +21,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     openGraph: {
       title: comp.title,
       description: comp.description,
+      images: comp.coverImage ? [comp.coverImage] : [],
     }
   };
 }

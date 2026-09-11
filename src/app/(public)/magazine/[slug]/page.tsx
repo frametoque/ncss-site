@@ -7,7 +7,7 @@ type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const res = await pool.query('SELECT title, "issueNumber", "volumeNumber" FROM "magazine" WHERE slug = $1', [slug]);
+  const res = await pool.query('SELECT title, "issueNumber", "volumeNumber", "coverImage" FROM "magazine" WHERE slug = $1', [slug]);
   if (res.rows.length === 0) return {};
   const mag = res.rows[0];
   
@@ -17,6 +17,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     openGraph: {
       title: `${mag.title} - Vol ${mag.volumeNumber}, Issue #${mag.issueNumber}`,
       description: `Read Vol ${mag.volumeNumber}, Issue #${mag.issueNumber} of the Nalanda College Science Society magazine: ${mag.title}.`,
+      images: mag.coverImage ? [mag.coverImage] : [],
     }
   };
 }
