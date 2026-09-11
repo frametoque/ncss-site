@@ -9,6 +9,9 @@ It provides news, updates, magazines, and competition registrations for students
 - Email: info@ncsciencesociety.com
 
 ## Main Sections
-- News & Updates
-- Competitions
-- Magazine
+- [Home](https://ncsciencesociety.com/)
+- [News & Updates](https://ncsciencesociety.com/news)
+- [Competitions](https://ncsciencesociety.com/competitions)
+- [Magazine](https://ncsciencesociety.com/magazines)
+- [About Us](https://ncsciencesociety.com/about)
+- [Contact](https://ncsciencesociety.com/contact)

@@ -118,10 +118,10 @@ export default async function AboutPage() {
                   <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-maroon-100 text-maroon-600 font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
                     <div className="w-2 h-2 bg-maroon-600 rounded-full" />
                   </div>
-                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-gray-100 bg-white shadow-sm">
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
                     <div className="text-maroon-600 font-bold text-sm mb-1">{milestone.year}</div>
-                    <h4 className="font-semibold text-gray-900 mb-1">{milestone.title}</h4>
-                    <p className="text-sm text-gray-600">{milestone.description}</p>
+                    <h4 className="font-semibold text-gray-900 mb-1 break-words">{milestone.title}</h4>
+                    <p className="text-sm text-gray-600 break-words">{milestone.description}</p>
                   </div>
                 </div>
               ))}
