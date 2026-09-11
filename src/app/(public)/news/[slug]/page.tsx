@@ -60,8 +60,8 @@ export default async function NewsDetailsPage({ params }: { params: Params }) {
           {/* Mobile Image (Hidden on Desktop) */}
           <div className="lg:hidden w-full bg-gray-100 rounded-3xl flex items-center justify-center border border-gray-200 overflow-hidden shadow-xl mb-8">
             {newsItem.coverImage ? (
-              <div className="w-full relative aspect-video">
-                <Image src={newsItem.coverImage} alt={newsItem.title} fill className="object-cover" />
+              <div className="w-full relative">
+                <Image src={newsItem.coverImage} alt={newsItem.title} width={1200} height={1200} className="w-full h-auto block" />
               </div>
             ) : (
               <div className="w-full aspect-video flex items-center justify-center">
@@ -77,11 +77,11 @@ export default async function NewsDetailsPage({ params }: { params: Params }) {
         </div>
 
         {/* Right Side: Desktop Image */}
-        <div className="hidden lg:flex relative sticky top-24 justify-center">
-          <div className="w-full max-w-md bg-gray-100 rounded-3xl flex items-center justify-center border border-gray-200 overflow-hidden shadow-2xl">
+        <div className="hidden lg:block sticky top-24 h-fit">
+          <div className="w-[85%] mx-auto bg-gray-100 rounded-3xl flex items-center justify-center border border-gray-200 overflow-hidden shadow-2xl">
             {newsItem.coverImage ? (
-              <div className="w-full relative aspect-video">
-                <Image src={newsItem.coverImage} alt={newsItem.title} fill className="object-cover" />
+              <div className="w-full relative">
+                <Image src={newsItem.coverImage} alt={newsItem.title} width={1200} height={1200} className="w-full h-auto block" />
               </div>
             ) : (
               <div className="w-full aspect-video flex items-center justify-center">

@@ -59,8 +59,8 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
         {/* Left Side: Content */}
         <div className="lg:col-span-8 min-w-0">
           {compItem.coverImage && (
-            <div className="w-full max-w-xl mx-auto mb-12 flex justify-center relative aspect-[16/9] rounded-3xl overflow-hidden shadow-md">
-              <Image src={compItem.coverImage} alt={compItem.title} fill className="object-cover" />
+            <div className="w-full max-w-xl mx-auto mb-12 rounded-3xl overflow-hidden shadow-md">
+              <Image src={compItem.coverImage} alt={compItem.title} width={1200} height={1200} className="w-full h-auto block" />
             </div>
           )}
 
