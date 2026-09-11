@@ -8,6 +8,7 @@ const bricolage = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ncsciencesociety.com"),
   title: {
     template: "%s | Nalanda College Science Society",
     default: "Nalanda College Science Society",
@@ -17,15 +18,17 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Nalanda College Science Society",
     description: "Official website of the Nalanda College Science Society (NCSS).",
-    url: "https://ncss.lk",
+    url: "https://ncsciencesociety.com",
     siteName: "NCSS",
     locale: "en_US",
     type: "website",
+    images: ["/cover.jpg"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Nalanda College Science Society",
     description: "Official website of the Nalanda College Science Society (NCSS).",
+    images: ["/cover.jpg"],
   },
 };
 
