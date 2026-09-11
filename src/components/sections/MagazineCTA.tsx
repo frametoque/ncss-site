@@ -5,7 +5,7 @@ import Image from "next/image";
 import pool from "@/lib/db";
 
 export async function MagazineCTA() {
-  const magRes = await pool.query('SELECT * FROM "magazine" ORDER BY "issueNumber" DESC LIMIT 1');
+  const magRes = await pool.query('SELECT * FROM "magazine" ORDER BY "createdAt" DESC LIMIT 1');
 
   if (magRes.rows.length === 0) return null;
 
