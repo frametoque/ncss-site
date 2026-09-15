@@ -33,17 +33,24 @@ export default async function AboutPage() {
   const ourVision = historyRes.rows.find((h: any) => h.sectionKey === 'our-vision');
   const ourMission = historyRes.rows.find((h: any) => h.sectionKey === 'our-mission');
 
+  const sanitizeContent = (content: string) => {
+    if (!content) return "";
+    // Preserve empty paragraphs before wiping out &nbsp;
+    let sanitized = content.replace(/<p>(&nbsp;|\u00A0|\s)+<\/p>/g, '<p><br></p>');
+    return sanitized.replace(/&nbsp;|\u00A0/g, ' ');
+  };
+
   const historyTitle = ourHistory?.title || "Our History";
-  const historyContent = (ourHistory?.content || "Founded decades ago, the Nalanda College Science Society has grown from a small group of enthusiasts to the premier scientific body within the school.").replace(/&nbsp;|\u00A0/g, ' ');
+  const historyContent = sanitizeContent(ourHistory?.content || "Founded decades ago, the Nalanda College Science Society has grown from a small group of enthusiasts to the premier scientific body within the school.");
 
   const magTitle = magFounder?.title || "Pulse Quest Magazine";
-  const magContent = (magFounder?.content || "Pulse Quest is more than just a magazine; it is a testament to student curiosity.").replace(/&nbsp;|\u00A0/g, ' ');
+  const magContent = sanitizeContent(magFounder?.content || "Pulse Quest is more than just a magazine; it is a testament to student curiosity.");
 
   const visionTitle = ourVision?.title || "Our Vision";
-  const visionContent = (ourVision?.content || "To inspire and engage students in the wonders of science, technology, engineering, and mathematics (STEM). We strive to bridge the gap between theoretical learning and practical application.").replace(/&nbsp;|\u00A0/g, ' ');
+  const visionContent = sanitizeContent(ourVision?.content || "To inspire and engage students in the wonders of science, technology, engineering, and mathematics (STEM). We strive to bridge the gap between theoretical learning and practical application.");
 
   const missionTitle = ourMission?.title || "Our Mission";
-  const missionContent = (ourMission?.content || "<ul><li>Organizing inter-school and intra-school competitions</li><li>Publishing our monthly science magazine</li><li>Conducting workshops and guest lectures</li><li>Fostering a community of curious minds</li></ul>").replace(/&nbsp;|\u00A0/g, ' ');
+  const missionContent = sanitizeContent(ourMission?.content || "<ul><li>Organizing inter-school and intra-school competitions</li><li>Publishing our monthly science magazine</li><li>Conducting workshops and guest lectures</li><li>Fostering a community of curious minds</li></ul>");
 
   return (
     <div className="container mx-auto px-4 py-16">
@@ -62,7 +69,7 @@ export default async function AboutPage() {
             <div className="md:pr-8 min-w-0">
               <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{visionTitle}</h2>
               <div 
-                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1 [&_p]:mb-4 [&_p:last-child]:mb-0"
+                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words max-w-none [&_p]:mb-4 [&_p:last-child]:mb-0"
                 dangerouslySetInnerHTML={{ __html: visionContent }}
               />
             </div>
@@ -71,7 +78,7 @@ export default async function AboutPage() {
             <div className="pt-8 md:pt-0 md:pl-8 min-w-0">
               <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{missionTitle}</h2>
               <div 
-                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1 [&_p]:mb-4 [&_p:last-child]:mb-0"
+                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words max-w-none [&_p]:mb-4 [&_p:last-child]:mb-0"
                 dangerouslySetInnerHTML={{ __html: missionContent }}
               />
             </div>
@@ -83,7 +90,7 @@ export default async function AboutPage() {
           <SlideUp className="min-w-0">
             <h2 className="text-3xl font-bold font-heading text-gray-900 mb-6">{historyTitle}</h2>
             <div 
-              className="prose prose-gray text-gray-700 whitespace-pre-wrap break-words max-w-none [&_p]:mb-4 [&_p:last-child]:mb-0"
+              className="text-gray-700 whitespace-pre-wrap break-words max-w-none [&_p]:mb-4 [&_p:last-child]:mb-0"
               dangerouslySetInnerHTML={{ __html: historyContent }}
             />
           </SlideUp>
@@ -136,7 +143,7 @@ export default async function AboutPage() {
               <div className="inline-block px-3 py-1 bg-maroon-800 text-maroon-100 rounded-full text-sm font-semibold mb-4 border border-maroon-700">Flagship Publication</div>
               <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4 truncate">{magTitle}</h2>
               <div 
-                className="text-maroon-100 mb-6 text-lg prose prose-invert max-w-none prose-p:leading-relaxed break-words [&_p]:mb-4 [&_p:last-child]:mb-0"
+                className="text-maroon-100 mb-6 text-lg max-w-none break-words [&_p:empty]:min-h-[1.5em] [&_p:has(br)]:min-h-[1.5em]"
                 dangerouslySetInnerHTML={{ __html: magContent }}
               />
             </StaggerItem>
