@@ -78,23 +78,6 @@ export default async function AboutPage() {
           </div>
         </FadeIn>
 
-        {/* Team Section */}
-        <div className="mb-24">
-          <SlideUp className="text-center mb-16">
-            <h2 className="text-3xl font-bold font-heading text-gray-900 mb-4">Executive Board</h2>
-            <p className="text-gray-600">Meet the dedicated students leading the society this year.</p>
-          </SlideUp>
-
-          <StaggerContainer className="flex flex-col items-center space-y-10 md:space-y-12">
-            {team.map((member) => (
-              <StaggerItem key={member.id} className="text-center min-w-0">
-                <h3 className="text-lg md:text-xl font-bold text-gray-900 uppercase tracking-wider mb-2 break-words">{member.role}</h3>
-                <p className="text-base md:text-lg text-gray-600 uppercase tracking-wide break-words">{member.name}</p>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-
         {/* History & Milestones */}
         <div className="grid lg:grid-cols-2 gap-12 mb-24">
           <SlideUp className="min-w-0">
@@ -167,15 +150,32 @@ export default async function AboutPage() {
           </StaggerContainer>
         </FadeIn>
 
+        {/* Team Section */}
+        <div className="mb-24">
+          <SlideUp className="text-center mb-16">
+            <h2 className="text-3xl font-bold font-heading text-gray-900 mb-4">Executive Board</h2>
+            <p className="text-gray-600">Meet the dedicated students leading the society this year.</p>
+          </SlideUp>
+
+          <StaggerContainer className="flex flex-col items-center space-y-10 md:space-y-12">
+            {team.map((member) => (
+              <StaggerItem key={member.id} className="text-center min-w-0">
+                <h3 className="text-lg md:text-xl font-bold text-gray-900 uppercase tracking-wider mb-2 break-words">{member.role}</h3>
+                <p className="text-base md:text-lg text-gray-600 uppercase tracking-wide break-words">{member.name}</p>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        </div>
+
         {/* Old Photo Archive */}
         <div className="mb-24">
           <SlideUp className="text-center mb-10">
             <h2 className="text-3xl font-bold font-heading text-gray-900 mb-4">Old Photo Archive</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">A glimpse into our rich past, memories, and the legacy left behind by previous generations.</p>
           </SlideUp>
-          <StaggerContainer className="columns-2 md:columns-4 gap-4 space-y-4">
+          <div className="columns-2 md:columns-4 gap-4 space-y-4">
             {photoRes.rows.map((photo: any) => (
-              <StaggerItem key={photo.id} className="break-inside-avoid relative rounded-2xl overflow-hidden shadow-sm group bg-gray-100 border border-gray-200 w-full mb-4 inline-block">
+              <SlideUp key={photo.id} className="break-inside-avoid relative rounded-2xl overflow-hidden shadow-sm group bg-gray-100 border border-gray-200 w-full mb-4 inline-block">
                 <Image 
                   src={photo.photoUrl} 
                   alt="Archive Photo" 
@@ -185,14 +185,14 @@ export default async function AboutPage() {
                   style={{ width: '100%', height: 'auto' }}
                   className="transition-transform duration-700 group-hover:scale-110 block" 
                 />
-              </StaggerItem>
+              </SlideUp>
             ))}
             {photoRes.rows.length === 0 && (
               <div className="col-span-2 md:col-span-4 text-center text-gray-500 italic py-12">
                 No archive photos added yet.
               </div>
             )}
-          </StaggerContainer>
+          </div>
         </div>
 
       </section>
