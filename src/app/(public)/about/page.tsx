@@ -34,16 +34,16 @@ export default async function AboutPage() {
   const ourMission = historyRes.rows.find((h: any) => h.sectionKey === 'our-mission');
 
   const historyTitle = ourHistory?.title || "Our History";
-  const historyContent = ourHistory?.content || "Founded decades ago, the Nalanda College Science Society has grown from a small group of enthusiasts to the premier scientific body within the school.";
+  const historyContent = (ourHistory?.content || "Founded decades ago, the Nalanda College Science Society has grown from a small group of enthusiasts to the premier scientific body within the school.").replace(/&nbsp;|\u00A0/g, ' ');
 
   const magTitle = magFounder?.title || "Pulse Quest Magazine";
-  const magContent = magFounder?.content || "Pulse Quest is more than just a magazine; it is a testament to student curiosity.";
+  const magContent = (magFounder?.content || "Pulse Quest is more than just a magazine; it is a testament to student curiosity.").replace(/&nbsp;|\u00A0/g, ' ');
 
   const visionTitle = ourVision?.title || "Our Vision";
-  const visionContent = ourVision?.content || "To inspire and engage students in the wonders of science, technology, engineering, and mathematics (STEM). We strive to bridge the gap between theoretical learning and practical application.";
+  const visionContent = (ourVision?.content || "To inspire and engage students in the wonders of science, technology, engineering, and mathematics (STEM). We strive to bridge the gap between theoretical learning and practical application.").replace(/&nbsp;|\u00A0/g, ' ');
 
   const missionTitle = ourMission?.title || "Our Mission";
-  const missionContent = ourMission?.content || "<ul><li>Organizing inter-school and intra-school competitions</li><li>Publishing our monthly science magazine</li><li>Conducting workshops and guest lectures</li><li>Fostering a community of curious minds</li></ul>";
+  const missionContent = (ourMission?.content || "<ul><li>Organizing inter-school and intra-school competitions</li><li>Publishing our monthly science magazine</li><li>Conducting workshops and guest lectures</li><li>Fostering a community of curious minds</li></ul>").replace(/&nbsp;|\u00A0/g, ' ');
 
   return (
     <div className="container mx-auto px-4 py-16">
@@ -59,19 +59,19 @@ export default async function AboutPage() {
         <FadeIn className="bg-maroon-50 rounded-3xl p-8 md:p-12 border border-maroon-100 mb-24">
           <div className="grid md:grid-cols-2 gap-8 md:gap-12 divide-y md:divide-y-0 md:divide-x divide-maroon-200">
             {/* Vision */}
-            <div className="md:pr-8">
+            <div className="md:pr-8 min-w-0">
               <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{visionTitle}</h2>
               <div 
-                className="text-gray-700 leading-relaxed whitespace-pre-wrap prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1"
+                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1"
                 dangerouslySetInnerHTML={{ __html: visionContent }}
               />
             </div>
             
             {/* Mission */}
-            <div className="pt-8 md:pt-0 md:pl-8">
+            <div className="pt-8 md:pt-0 md:pl-8 min-w-0">
               <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{missionTitle}</h2>
               <div 
-                className="text-gray-700 leading-relaxed whitespace-pre-wrap prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1"
+                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1"
                 dangerouslySetInnerHTML={{ __html: missionContent }}
               />
             </div>
@@ -85,20 +85,11 @@ export default async function AboutPage() {
             <p className="text-gray-600">Meet the dedicated students leading the society this year.</p>
           </SlideUp>
 
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-8">
+          <StaggerContainer className="flex flex-col items-center space-y-10 md:space-y-12">
             {team.map((member) => (
-              <StaggerItem key={member.id} className="text-center group">
-                <div className="w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full bg-gray-200 mb-4 overflow-hidden border-4 border-white shadow-md relative transition-transform duration-300 group-hover:scale-105">
-                  {member.photoUrl ? (
-                    <Image src={member.photoUrl} alt={member.name} fill className="object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
-                      Photo
-                    </div>
-                  )}
-                </div>
-                <h3 className="text-lg font-bold text-gray-900">{member.name}</h3>
-                <p className="text-sm font-medium text-maroon-600">{member.role}</p>
+              <StaggerItem key={member.id} className="text-center min-w-0">
+                <h3 className="text-lg md:text-xl font-bold text-gray-900 uppercase tracking-wider mb-2 break-words">{member.role}</h3>
+                <p className="text-base md:text-lg text-gray-600 uppercase tracking-wide break-words">{member.name}</p>
               </StaggerItem>
             ))}
           </StaggerContainer>
@@ -106,14 +97,14 @@ export default async function AboutPage() {
 
         {/* History & Milestones */}
         <div className="grid lg:grid-cols-2 gap-12 mb-24">
-          <SlideUp>
+          <SlideUp className="min-w-0">
             <h2 className="text-3xl font-bold font-heading text-gray-900 mb-6">{historyTitle}</h2>
             <div 
-              className="prose prose-gray text-gray-700 whitespace-pre-wrap"
+              className="prose prose-gray text-gray-700 whitespace-pre-wrap break-words max-w-none"
               dangerouslySetInnerHTML={{ __html: historyContent }}
             />
           </SlideUp>
-          <div>
+          <div className="min-w-0">
             <SlideUp>
               <h2 className="text-3xl font-bold font-heading text-gray-900 mb-6">Milestones</h2>
             </SlideUp>
@@ -144,9 +135,9 @@ export default async function AboutPage() {
           </SlideUp>
           <StaggerContainer className="grid md:grid-cols-3 gap-6">
             {eventRes.rows.map((event: any) => (
-              <StaggerItem key={event.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{event.title}</h3>
-                <p className="text-gray-600">{event.description}</p>
+              <StaggerItem key={event.id} className="min-w-0 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <h3 className="text-xl font-bold text-gray-900 mb-3 break-words">{event.title}</h3>
+                <p className="text-gray-600 break-words">{event.description}</p>
               </StaggerItem>
             ))}
             {eventRes.rows.length === 0 && (
