@@ -62,7 +62,7 @@ export default async function AboutPage() {
             <div className="md:pr-8 min-w-0">
               <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{visionTitle}</h2>
               <div 
-                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1"
+                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1 [&_p]:mb-4 [&_p:last-child]:mb-0"
                 dangerouslySetInnerHTML={{ __html: visionContent }}
               />
             </div>
@@ -71,7 +71,7 @@ export default async function AboutPage() {
             <div className="pt-8 md:pt-0 md:pl-8 min-w-0">
               <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{missionTitle}</h2>
               <div 
-                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1"
+                className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none prose-ul:list-disc prose-ul:list-inside prose-li:my-1 [&_p]:mb-4 [&_p:last-child]:mb-0"
                 dangerouslySetInnerHTML={{ __html: missionContent }}
               />
             </div>
@@ -83,7 +83,7 @@ export default async function AboutPage() {
           <SlideUp className="min-w-0">
             <h2 className="text-3xl font-bold font-heading text-gray-900 mb-6">{historyTitle}</h2>
             <div 
-              className="prose prose-gray text-gray-700 whitespace-pre-wrap break-words max-w-none"
+              className="prose prose-gray text-gray-700 whitespace-pre-wrap break-words max-w-none [&_p]:mb-4 [&_p:last-child]:mb-0"
               dangerouslySetInnerHTML={{ __html: historyContent }}
             />
           </SlideUp>
@@ -136,7 +136,7 @@ export default async function AboutPage() {
               <div className="inline-block px-3 py-1 bg-maroon-800 text-maroon-100 rounded-full text-sm font-semibold mb-4 border border-maroon-700">Flagship Publication</div>
               <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4 truncate">{magTitle}</h2>
               <div 
-                className="text-maroon-100 mb-6 text-lg prose prose-invert max-w-none prose-p:leading-relaxed break-words"
+                className="text-maroon-100 mb-6 text-lg prose prose-invert max-w-none prose-p:leading-relaxed break-words [&_p]:mb-4 [&_p:last-child]:mb-0"
                 dangerouslySetInnerHTML={{ __html: magContent }}
               />
             </StaggerItem>
