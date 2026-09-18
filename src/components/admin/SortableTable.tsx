@@ -27,9 +27,10 @@ interface SortableTableProps {
   basePath: string;
   onReorder: (ids: string[]) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  showQuizzesLink?: boolean;
 }
 
-function SortableRow({ item, columns, basePath, onDelete }: any) {
+function SortableRow({ item, columns, basePath, onDelete, showQuizzesLink }: any) {
   const {
     attributes,
     listeners,
@@ -72,6 +73,14 @@ function SortableRow({ item, columns, basePath, onDelete }: any) {
         </td>
       ))}
       <td className="p-4 flex items-center justify-end gap-2">
+        {showQuizzesLink && item.isQuiz && (
+          <Link
+            href={`${basePath}/${item.id}/quizzes`}
+            className="px-3 py-1.5 bg-maroon-50 text-maroon-700 rounded-lg hover:bg-maroon-100 transition-colors text-sm font-medium mr-2"
+          >
+            Quizzes
+          </Link>
+        )}
         <Link
           href={`${basePath}/${item.id}`}
           className="p-2 text-maroon-700 hover:bg-maroon-100 rounded-lg transition-colors"
@@ -90,9 +99,14 @@ function SortableRow({ item, columns, basePath, onDelete }: any) {
   );
 }
 
-export function SortableTable({ items: initialItems, columns, basePath, onReorder, onDelete }: SortableTableProps) {
+export function SortableTable({ items: initialItems, columns, basePath, onReorder, onDelete, showQuizzesLink }: SortableTableProps) {
   const [items, setItems] = useState(initialItems);
   const [isSaving, setIsSaving] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -122,6 +136,14 @@ export function SortableTable({ items: initialItems, columns, basePath, onReorde
   React.useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
+
+  if (!isMounted) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-maroon-100 p-8 flex items-center justify-center min-h-[200px]">
+        <Loader2 className="w-6 h-6 text-maroon-300 animate-spin" />
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -154,7 +176,7 @@ export function SortableTable({ items: initialItems, columns, basePath, onReorde
           <tbody>
             <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
               {items.map((item) => (
-                <SortableRow key={item.id} item={item} columns={columns} basePath={basePath} onDelete={onDelete} />
+                <SortableRow key={item.id} item={item} columns={columns} basePath={basePath} onDelete={onDelete} showQuizzesLink={showQuizzesLink} />
               ))}
             </SortableContext>
           </tbody>

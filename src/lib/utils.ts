@@ -13,7 +13,7 @@ export function isCompetitionEnded(comp: { date?: string | null, deadline?: stri
 
   // Try to parse range (e.g. "Feb 10 - Feb 20, 2024")
   const parts = strToUse.split('-');
-  let lastPart = parts[parts.length - 1].trim();
+  const lastPart = parts[parts.length - 1].trim();
 
   let parsedDate = new Date(lastPart);
   

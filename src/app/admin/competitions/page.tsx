@@ -34,6 +34,7 @@ export default async function CompetitionsAdmin() {
         basePath="/admin/competitions" 
         onReorder={updateCompetitionsOrder} 
         onDelete={deleteCompetition} 
+        showQuizzesLink={true}
       />
     </div>
   );

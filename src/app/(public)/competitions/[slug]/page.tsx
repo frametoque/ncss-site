@@ -40,6 +40,9 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
   const formsRes = await pool.query('SELECT * FROM "form" WHERE "competitionId" = $1 AND "isActive" = true ORDER BY "createdAt" ASC', [compItem.id]);
   const linkedForms = formsRes.rows;
 
+  const quizRes = await pool.query('SELECT * FROM quiz_category WHERE "competitionId" = $1 ORDER BY name ASC', [compItem.id]);
+  const quizzes = quizRes.rows;
+
   return (
     <article className="container mx-auto px-4 md:px-8 py-16 max-w-[1400px]">
       <div className="mb-10">
@@ -144,7 +147,7 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
             )}
 
             {linkedForms.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-3 mt-6">
                 <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider text-center mb-2">Available Forms</p>
                 {linkedForms.map(form => (
                   <Button key={form.id} size="lg" className="w-full rounded-xl h-14 text-lg shadow-lg shadow-maroon-500/30" asChild>
@@ -155,11 +158,26 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
                 ))}
               </div>
             ) : (
-              !ended && (
+              !ended && quizzes.length === 0 && (
                 <Button size="lg" disabled className="w-full rounded-xl h-14 text-lg bg-gray-200 text-gray-500 cursor-not-allowed">
                   Registration Closed
                 </Button>
               )
+            )}
+
+            {compItem.acceptingQuizAnswers && quizzes.length > 0 && (
+              <div className="space-y-3 mt-8 pt-6 border-t border-gray-100">
+                <p className="text-sm font-semibold text-maroon-700 uppercase tracking-wider text-center mb-2 flex items-center justify-center gap-2">
+                  <Trophy className="h-4 w-4" /> Live Quizzes
+                </p>
+                {quizzes.map(quiz => (
+                  <Button key={quiz.id} variant="outline" size="lg" className="w-full rounded-xl h-14 text-lg border-maroon-200 text-maroon-800 hover:bg-maroon-50" asChild>
+                    <Link href={`/competitions/${slug}/quiz/${quiz.id}`}>
+                      {quiz.name} <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                ))}
+              </div>
             )}
           </div>
         </div>

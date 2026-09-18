@@ -10,6 +10,7 @@ export default function NewCompetition() {
       slug: formData.get("slug"),
       description: formData.get("description"),
       isEnded: formData.get("isEnded") === "on",
+      isQuiz: formData.get("isQuiz") === "on",
       date: formData.get("date"),
       time: formData.get("time"),
       location: formData.get("location"),

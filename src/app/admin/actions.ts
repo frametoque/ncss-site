@@ -102,8 +102,8 @@ export async function deleteMagazine(id: string) {
 // Competitions
 export async function createCompetition(data: Record<string, any>) {
   await pool.query(
-    'INSERT INTO "competition" (id, slug, title, description, "isEnded", date, time, location, deadline, content, "coverImage", "rulesPdf", "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())',
-    [data.slug, data.title, data.description, data.isEnded, data.date || null, data.time || null, data.location || null, data.deadline || null, data.content, data.coverImage || null, data.rulesPdf || null]
+    'INSERT INTO "competition" (id, slug, title, description, "isEnded", "isQuiz", date, time, location, deadline, content, "coverImage", "rulesPdf", "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())',
+    [data.slug, data.title, data.description, data.isEnded, data.isQuiz || false, data.date || null, data.time || null, data.location || null, data.deadline || null, data.content, data.coverImage || null, data.rulesPdf || null]
   );
   revalidatePath("/admin/competitions");
   revalidatePath("/competitions");
@@ -112,8 +112,8 @@ export async function createCompetition(data: Record<string, any>) {
 
 export async function updateCompetition(id: string, data: Record<string, any>) {
   await pool.query(
-    'UPDATE "competition" SET slug = $1, title = $2, description = $3, "isEnded" = $4, date = $5, time = $6, location = $7, deadline = $8, content = $9, "coverImage" = COALESCE($10, "coverImage"), "rulesPdf" = COALESCE($11, "rulesPdf"), "updatedAt" = now() WHERE id = $12',
-    [data.slug, data.title, data.description, data.isEnded, data.date || null, data.time || null, data.location || null, data.deadline || null, data.content, data.coverImage || null, data.rulesPdf || null, id]
+    'UPDATE "competition" SET slug = $1, title = $2, description = $3, "isEnded" = $4, "isQuiz" = $5, date = $6, time = $7, location = $8, deadline = $9, content = $10, "coverImage" = COALESCE($11, "coverImage"), "rulesPdf" = COALESCE($12, "rulesPdf"), "updatedAt" = now() WHERE id = $13',
+    [data.slug, data.title, data.description, data.isEnded, data.isQuiz || false, data.date || null, data.time || null, data.location || null, data.deadline || null, data.content, data.coverImage || null, data.rulesPdf || null, id]
   );
   revalidatePath("/admin/competitions");
   revalidatePath("/competitions");

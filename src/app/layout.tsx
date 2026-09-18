@@ -62,7 +62,7 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col antialiased" suppressHydrationWarning>
         <SmoothScroller />
         <ImageProtector />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 flex flex-col">{children}</main>
       </body>
     </html>
   );

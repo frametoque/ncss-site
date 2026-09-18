@@ -36,7 +36,7 @@ export default async function AboutPage() {
   const sanitizeContent = (content: string) => {
     if (!content) return "";
     // Preserve empty paragraphs before wiping out &nbsp;
-    let sanitized = content.replace(/<p>(&nbsp;|\u00A0|\s)+<\/p>/g, '<p><br></p>');
+    const sanitized = content.replace(/<p>(&nbsp;|\u00A0|\s)+<\/p>/g, '<p><br></p>');
     return sanitized.replace(/&nbsp;|\u00A0/g, ' ');
   };
 

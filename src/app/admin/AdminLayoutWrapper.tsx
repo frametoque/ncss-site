@@ -15,7 +15,7 @@ export function AdminLayoutWrapper({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-white">
       <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-8">
         {children}
       </main>
     </div>

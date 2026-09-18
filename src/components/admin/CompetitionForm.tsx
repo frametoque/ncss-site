@@ -108,7 +108,14 @@ export function CompetitionForm({ initialData, action }: CompetitionFormProps) {
         <h1 className="text-3xl font-bold text-maroon-900">
           {initialData ? "Edit Competition" : "New Competition"}
         </h1>
-        <Link href="/admin/competitions" className="text-maroon-700/70 hover:text-maroon-800">Cancel</Link>
+        <div className="flex gap-4 items-center">
+          {initialData?.isQuiz && (
+            <Link href={`/admin/competitions/${initialData.id}/quizzes`} className="px-4 py-2 bg-maroon-100 text-maroon-800 rounded-lg hover:bg-maroon-200 text-sm font-medium">
+              Manage Quizzes
+            </Link>
+          )}
+          <Link href="/admin/competitions" className="text-maroon-700/70 hover:text-maroon-800">Cancel</Link>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border border-maroon-100 space-y-6">
@@ -156,6 +163,17 @@ export function CompetitionForm({ initialData, action }: CompetitionFormProps) {
             <label htmlFor="deadline" className="block text-sm font-medium text-maroon-800">Deadline</label>
             <input type="datetime-local" id="deadline" name="deadline" defaultValue={initialData?.deadline || ""} className="w-full px-4 py-2 border border-maroon-200 rounded-lg focus:ring-maroon-500 focus:border-maroon-500" />
           </div>
+        </div>
+
+        <div className="flex gap-6 p-4 bg-maroon-50 border border-maroon-100 rounded-lg">
+          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-maroon-900">
+            <input type="checkbox" name="isEnded" defaultChecked={initialData?.isEnded} className="w-4 h-4 text-maroon-600 focus:ring-maroon-500 border-maroon-300 rounded" />
+            Competition has ended
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-maroon-900">
+            <input type="checkbox" name="isQuiz" defaultChecked={initialData?.isQuiz} className="w-4 h-4 text-maroon-600 focus:ring-maroon-500 border-maroon-300 rounded" />
+            This is a Quiz Competition
+          </label>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-maroon-50">

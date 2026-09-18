@@ -43,11 +43,11 @@ export function Sidebar() {
   // We wrap the aside in a container so that unfolding it on hover floats over the main content 
   // without pushing it and causing jitter.
   return (
-    <div className={`${isCollapsed ? "w-20" : "w-64"} flex-shrink-0 transition-all duration-300 relative z-50`}>
+    <div className={`${isCollapsed ? "w-20" : "w-64"} flex-shrink-0 transition-all duration-300 relative z-50 sticky top-0 h-screen`}>
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`${visuallyCollapsed ? "w-20" : "w-64"} bg-maroon-900 text-white min-h-screen flex flex-col shadow-xl transition-all duration-300 absolute inset-y-0 left-0 overflow-hidden`}
+        className={`${visuallyCollapsed ? "w-20" : "w-64"} bg-maroon-900 text-white h-screen flex flex-col shadow-xl transition-all duration-300 absolute inset-y-0 left-0 overflow-hidden`}
       >
         <div className="h-20 flex items-center px-4 relative">
           <h2 className={`absolute left-16 text-2xl font-bold tracking-tight whitespace-nowrap transition-opacity duration-300 ${visuallyCollapsed ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
