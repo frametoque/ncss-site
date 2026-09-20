@@ -214,7 +214,7 @@ export function MagazineForm({ initialData, action }: MagazineFormProps) {
 
         <div className="space-y-2">
           <label htmlFor="pdfUrl" className="block text-sm font-medium text-maroon-800">
-            Magazine PDF (Max 50MB)
+            Magazine PDF (Max 5MB)
           </label>
           <p className="text-xs text-maroon-600 mb-2">
             Please compress the PDF via <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" rel="noopener noreferrer" className="text-maroon-700 hover:underline">iLovePDF</a> before uploading if it exceeds the limit.

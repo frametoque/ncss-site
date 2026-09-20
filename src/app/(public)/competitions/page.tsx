@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   description: "Participate in science competitions hosted by the Nalanda College Science Society.",
 };
 
+export const revalidate = 60;
+
 export default async function CompetitionsPage() {
   const compRes = await pool.query('SELECT * FROM "competition" ORDER BY "createdAt" DESC');
   const competitions = compRes.rows;

@@ -4,7 +4,7 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 import { deleteMagazine } from "../actions";
 
 export default async function MagazinesAdmin() {
-  const res = await pool.query('SELECT * FROM "magazine" ORDER BY "issueNumber" DESC');
+  const res = await pool.query('SELECT * FROM "magazine" ORDER BY "createdAt" DESC');
   const magazines = res.rows;
 
   return (

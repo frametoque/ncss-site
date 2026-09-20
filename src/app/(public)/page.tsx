@@ -15,6 +15,8 @@ import { SlideUp } from "@/components/animations/SlideUp";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { StaggerContainer, StaggerItem } from "@/components/animations/StaggerGroup";
 
+export const revalidate = 60;
+
 export default async function Home() {
   const compRes = await pool.query('SELECT * FROM "competition" ORDER BY "createdAt" DESC');
   const competitions = compRes.rows;
@@ -177,7 +179,7 @@ export default async function Home() {
       </section>
 
       {/* Instagram Feed Section */}
-      <InstagramSlider />
+      {/* <InstagramSlider /> */}
 
       {/* Newest Magazine Release */}
       <MagazineCTA />

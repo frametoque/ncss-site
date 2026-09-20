@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: "Read the latest news, announcements, and research articles from the Nalanda College Science Society.",
 };
 
+export const revalidate = 60;
+
 export default async function NewsPage() {
   // Fetch all posts
   const newsRes = await pool.query('SELECT * FROM "post" ORDER BY "createdAt" DESC');

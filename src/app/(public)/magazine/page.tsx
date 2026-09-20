@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   description: "Read the latest issues of the Nalanda College Science Society magazine, featuring articles, research, and more.",
 };
 
+export const revalidate = 60;
+
 export default async function MagazinesPage() {
   const magsRes = await pool.query('SELECT * FROM "magazine" ORDER BY "createdAt" DESC');
   const magazines = magsRes.rows;
