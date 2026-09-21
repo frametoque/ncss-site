@@ -41,19 +41,18 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
     try {
       const finalQuestions = [...questions];
       
-      const uploadFile = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', '/api/upload-server');
-          xhr.onload = () => {
-            if (xhr.status === 200) resolve(JSON.parse(xhr.responseText).url);
-            else reject(new Error('Upload failed'));
-          };
-          xhr.onerror = () => reject(new Error('Network error'));
-          const uploadData = new FormData();
-          uploadData.append('file', file);
-          xhr.send(uploadData);
+      const uploadFile = async (file: File, onProgress?: (pct: number) => void): Promise<string> => {
+        const { upload } = await import('@vercel/blob/client');
+        const blob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+          onUploadProgress: (progressEvent) => {
+            if (onProgress) {
+              onProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
+            }
+          }
         });
+        return blob.url;
       };
 
       for (let i = 0; i < finalQuestions.length; i++) {

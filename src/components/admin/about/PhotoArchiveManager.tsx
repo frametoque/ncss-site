@@ -91,15 +91,14 @@ export function PhotoArchiveManager({ initialData = [] }: { initialData: any[] }
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const uploadData = new FormData();
-        uploadData.append('file', file);
-        
-        const res = await fetch('/api/upload-server', { method: 'POST', body: uploadData });
-        if (!res.ok) throw new Error('Upload failed');
-        const { url } = await res.json();
+        const { upload } = await import('@vercel/blob/client');
+        const blob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload'
+        });
         
         await createPhotoArchive({
-          photoUrl: url,
+          photoUrl: blob.url,
           orderIndex: items.length + i
         });
       }

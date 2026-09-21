@@ -46,34 +46,18 @@ export function CompetitionForm({ initialData, action }: CompetitionFormProps) {
     try {
       const formData = new FormData(e.currentTarget);
       
-      const uploadFileWithProgress = (file: File, onProgress?: (pct: number) => void): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', '/api/upload-server');
-          
-          if (onProgress) {
-            xhr.upload.onprogress = (evt) => {
-              if (evt.lengthComputable) {
-                onProgress(Math.round((evt.loaded / evt.total) * 100));
-              }
-            };
-          }
-          
-          xhr.onload = () => {
-            if (xhr.status === 200) {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response.url);
-            } else {
-              reject(new Error('Upload failed with status ' + xhr.status));
+      const uploadFileWithProgress = async (file: File, onProgress?: (pct: number) => void): Promise<string> => {
+        const { upload } = await import('@vercel/blob/client');
+        const blob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+          onUploadProgress: (progressEvent) => {
+            if (onProgress) {
+              onProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
             }
-          };
-          
-          xhr.onerror = () => reject(new Error('Network error during upload'));
-          
-          const uploadData = new FormData();
-          uploadData.append('file', file);
-          xhr.send(uploadData);
+          }
         });
+        return blob.url;
       };
 
       const coverFile = coverInputRef.current?.files?.[0];
