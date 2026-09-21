@@ -165,10 +165,20 @@ export default async function AboutPage() {
           </SlideUp>
 
           <StaggerContainer className="flex flex-col items-center space-y-10 md:space-y-12">
-            {team.map((member) => (
-              <StaggerItem key={member.id} className="text-center min-w-0">
-                <h3 className="text-lg md:text-xl font-bold text-gray-900 uppercase tracking-wider mb-2 break-words">{member.role}</h3>
-                <p className="text-base md:text-lg text-gray-600 uppercase tracking-wide break-words">{member.name}</p>
+            {team.reduce((acc: any[], member: any) => {
+              const lastGroup = acc[acc.length - 1];
+              if (lastGroup && lastGroup.role === member.role) {
+                lastGroup.members.push(member);
+              } else {
+                acc.push({ role: member.role, members: [member] });
+              }
+              return acc;
+            }, []).map((group: any, idx: number) => (
+              <StaggerItem key={idx} className="text-center min-w-0">
+                <h3 className="text-lg md:text-xl font-bold text-gray-900 uppercase tracking-wider mb-2 break-words">{group.role}</h3>
+                {group.members.map((m: any) => (
+                  <p key={m.id} className="text-base md:text-lg text-gray-600 uppercase tracking-wide break-words mb-1 last:mb-0">{m.name}</p>
+                ))}
               </StaggerItem>
             ))}
           </StaggerContainer>
