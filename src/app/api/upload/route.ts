@@ -20,6 +20,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             'application/pdf',
           ],
           maximumSizeInBytes: 50 * 1024 * 1024, // 50MB limit
+          addRandomSuffix: true,
           // Keep tokens alive long enough for large uploads
           tokenPayload: JSON.stringify({
             // Any custom metadata you want to attach

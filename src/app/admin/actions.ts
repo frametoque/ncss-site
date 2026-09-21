@@ -2,7 +2,18 @@
 
 import pool from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { put } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
+
+
+async function deleteOldBlob(url: string | null | undefined) {
+  if (url && url.includes('public.blob.vercel-storage.com')) {
+    try {
+      await del(url);
+    } catch (e) {
+      console.error('Failed to delete blob', url, e);
+    }
+  }
+}
 
 async function handleFileUpload(file: any): Promise<string | null> {
   if (!file || typeof file === "string" || file.size === 0) return typeof file === "string" && file ? file : null;
@@ -13,6 +24,7 @@ async function handleFileUpload(file: any): Promise<string | null> {
 // Posts
 export async function createPost(data: Record<string, any>) {
   const coverImage = await handleFileUpload(data.coverImage);
+  if (coverImage && oldRes.rows[0] && coverImage !== oldRes.rows[0].coverImage) await deleteOldBlob(oldRes.rows[0].coverImage);
   
   // Calculate reading time automatically
   const plainText = (data.content || "").replace(/<[^>]*>?/gm, '');
@@ -29,9 +41,11 @@ export async function createPost(data: Record<string, any>) {
 }
 
 export async function updatePost(id: string, data: Record<string, any>) {
+  const oldRes = await pool.query('SELECT "coverImage" FROM "post" WHERE id = $1', [id]);
   // If coverImage is a string or empty, handleFileUpload returns it or null. 
   // Wait, if it's not provided, we should probably fetch existing and keep it, but the form will pass the existing string if unchanged.
   const coverImage = await handleFileUpload(data.coverImage);
+  if (coverImage && oldRes.rows[0] && coverImage !== oldRes.rows[0].coverImage) await deleteOldBlob(oldRes.rows[0].coverImage);
   
   // Calculate reading time automatically
   const plainText = (data.content || "").replace(/<[^>]*>?/gm, '');
@@ -48,6 +62,8 @@ export async function updatePost(id: string, data: Record<string, any>) {
 }
 
 export async function deletePost(id: string) {
+  const oldRes = await pool.query('SELECT "coverImage" FROM "post" WHERE id = $1', [id]);
+  if (oldRes.rows[0]) await deleteOldBlob(oldRes.rows[0].coverImage);
   await pool.query('DELETE FROM "post" WHERE id = $1', [id]);
   revalidatePath("/admin/posts");
   revalidatePath("/news");
@@ -59,6 +75,9 @@ export async function createMagazine(data: Record<string, any>) {
   const coverThumbnail = await handleFileUpload(data.coverThumbnail);
   const outNowImage = await handleFileUpload(data.outNowImage);
   const pdfUrl = await handleFileUpload(data.pdfUrl);
+  if (coverThumbnail && oldRes.rows[0] && coverThumbnail !== oldRes.rows[0].coverThumbnail) await deleteOldBlob(oldRes.rows[0].coverThumbnail);
+  if (outNowImage && oldRes.rows[0] && outNowImage !== oldRes.rows[0].outNowImage) await deleteOldBlob(oldRes.rows[0].outNowImage);
+  if (pdfUrl && oldRes.rows[0] && pdfUrl !== oldRes.rows[0].pdfUrl) await deleteOldBlob(oldRes.rows[0].pdfUrl);
   
   const vol = data.volumeNumber || 1;
   const slug = `${data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-vol${vol}-issue${data.issueNumber}`;
@@ -74,9 +93,13 @@ export async function createMagazine(data: Record<string, any>) {
 }
 
 export async function updateMagazine(id: string, data: Record<string, any>) {
+  const oldRes = await pool.query('SELECT "coverThumbnail", "outNowImage", "pdfUrl" FROM "magazine" WHERE id = $1', [id]);
   const coverThumbnail = await handleFileUpload(data.coverThumbnail);
   const outNowImage = await handleFileUpload(data.outNowImage);
   const pdfUrl = await handleFileUpload(data.pdfUrl);
+  if (coverThumbnail && oldRes.rows[0] && coverThumbnail !== oldRes.rows[0].coverThumbnail) await deleteOldBlob(oldRes.rows[0].coverThumbnail);
+  if (outNowImage && oldRes.rows[0] && outNowImage !== oldRes.rows[0].outNowImage) await deleteOldBlob(oldRes.rows[0].outNowImage);
+  if (pdfUrl && oldRes.rows[0] && pdfUrl !== oldRes.rows[0].pdfUrl) await deleteOldBlob(oldRes.rows[0].pdfUrl);
 
   const vol = data.volumeNumber || 1;
   const slug = `${data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-vol${vol}-issue${data.issueNumber}`;
@@ -96,6 +119,12 @@ export async function updateMagazine(id: string, data: Record<string, any>) {
 }
 
 export async function deleteMagazine(id: string) {
+  const oldRes = await pool.query('SELECT "coverThumbnail", "outNowImage", "pdfUrl" FROM "magazine" WHERE id = $1', [id]);
+  if (oldRes.rows[0]) {
+    await deleteOldBlob(oldRes.rows[0].coverThumbnail);
+    await deleteOldBlob(oldRes.rows[0].outNowImage);
+    await deleteOldBlob(oldRes.rows[0].pdfUrl);
+  }
   await pool.query('DELETE FROM "magazine" WHERE id = $1', [id]);
   revalidatePath("/admin/magazines");
   revalidatePath("/magazine");
