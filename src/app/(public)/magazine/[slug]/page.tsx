@@ -5,6 +5,8 @@ import { Metadata } from "next";
 
 type Params = Promise<{ slug: string }>;
 
+export const revalidate = 60;
+
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   const res = await pool.query('SELECT title, "issueNumber", "volumeNumber", "coverThumbnail" FROM "magazine" WHERE slug = $1', [slug]);

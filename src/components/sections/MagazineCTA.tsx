@@ -39,7 +39,7 @@ export async function MagazineCTA() {
         </div>
         <div className="w-64 md:w-80 shrink-0 relative group perspective-[1000px]">
           {/* Book cover with real image */}
-          <div className="w-full aspect-[3/4] rounded-r-xl rounded-l-md shadow-[20px_20px_40px_rgba(0,0,0,0.4)] -rotate-y-12 rotate-x-6 group-hover:rotate-y-0 group-hover:rotate-x-0 transition-transform duration-500 transform-style-3d relative overflow-hidden">
+          <div className="w-full aspect-[1/1.414] rounded-r-xl rounded-l-md shadow-[20px_20px_40px_rgba(0,0,0,0.4)] -rotate-y-12 rotate-x-6 group-hover:rotate-y-0 group-hover:rotate-x-0 transition-transform duration-500 transform-style-3d relative overflow-hidden">
             <Image
               src={latest.outNowImage || "/publications/vol3-outnow.png"}
               alt={latest.title}

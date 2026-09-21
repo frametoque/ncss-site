@@ -31,7 +31,7 @@ export default async function MagazinesPage() {
       <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
         {magazines.map((mag) => (
           <StaggerItem key={mag.id} className="flex flex-col items-center group">
-            <Link href={`/magazine/${mag.slug}`} className="block w-full aspect-[3/4] bg-gray-100 rounded-lg shadow-sm border border-gray-200 mb-4 relative overflow-hidden group-hover:shadow-md transition-shadow">
+            <Link href={`/magazine/${mag.slug}`} className="block w-full aspect-[1/1.414] bg-gray-100 rounded-lg shadow-sm border border-gray-200 mb-4 relative overflow-hidden group-hover:shadow-md transition-shadow">
               {mag.coverThumbnail ? (
                 <Image src={mag.coverThumbnail} alt={mag.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
               ) : (

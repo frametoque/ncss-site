@@ -19,12 +19,22 @@ export function MagazineForm({ initialData, action }: MagazineFormProps) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   const handlePdfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPdfError(null);
     const file = e.target.files?.[0];
     if (!file || file.type !== "application/pdf") return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPdfError("File size exceeds 5MB limit. Please compress the PDF via iLovePDF.");
+      e.target.value = "";
+      setThumbnailPreview(initialData?.coverThumbnail || null);
+      if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+      return;
+    }
 
     setIsExtracting(true);
     try {
@@ -228,8 +238,16 @@ export function MagazineForm({ initialData, action }: MagazineFormProps) {
             ref={fileInputRef}
             required={!initialData?.pdfUrl}
             onChange={handlePdfChange}
-            className="w-full px-4 py-2 border border-maroon-200 rounded-lg focus:ring-maroon-500 focus:border-maroon-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-maroon-500 focus:border-maroon-500 ${pdfError ? 'border-red-500 bg-red-50' : 'border-maroon-200'}`}
           />
+          {pdfError && (
+            <div className="mt-2 p-3 bg-red-100 text-red-800 text-sm rounded-lg border border-red-200 shadow-sm flex items-start gap-2">
+              <span className="font-semibold whitespace-nowrap">⚠️ Size Error:</span>
+              <span>
+                {pdfError} <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-red-900 ml-1">Click here to open iLovePDF</a>
+              </span>
+            </div>
+          )}
         </div>
 
         {isExtracting && (

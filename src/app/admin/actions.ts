@@ -70,6 +70,7 @@ export async function createMagazine(data: Record<string, any>) {
   );
   revalidatePath("/admin/magazines");
   revalidatePath("/magazine");
+  revalidatePath(`/magazine/${slug}`);
 }
 
 export async function updateMagazine(id: string, data: Record<string, any>) {
@@ -91,6 +92,7 @@ export async function updateMagazine(id: string, data: Record<string, any>) {
   await pool.query(query, params);
   revalidatePath("/admin/magazines");
   revalidatePath("/magazine");
+  revalidatePath(`/magazine/${slug}`);
 }
 
 export async function deleteMagazine(id: string) {

@@ -7,7 +7,9 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 // Configure the worker correctly for Next.js App Router
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+
 
 interface FlipbookProps {
   pdfUrl: string;
@@ -18,8 +20,14 @@ export default function Flipbook({ pdfUrl }: FlipbookProps) {
   const [windowWidth, setWindowWidth] = useState(1000);
   const [windowHeight, setWindowHeight] = useState(800);
 
+  const pdfOptions = React.useMemo(() => ({
+    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+    cMapPacked: true,
+    standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+  }), []);
+
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
-  const flipBookRef = React.useRef<any>(null);
+  const flipBookRef = React.useRef<React.ElementRef<typeof HTMLFlipBook> | null>(null);
 
   useEffect(() => {
     // Create Audio instance on client mount for reliable playback
@@ -42,9 +50,9 @@ export default function Flipbook({ pdfUrl }: FlipbookProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!flipBookRef.current) return;
       if (e.key === 'ArrowRight') {
-        flipBookRef.current.pageFlip().flipNext();
+        (flipBookRef.current as { pageFlip: () => { flipNext: () => void } }).pageFlip().flipNext();
       } else if (e.key === 'ArrowLeft') {
-        flipBookRef.current.pageFlip().flipPrev();
+        (flipBookRef.current as { pageFlip: () => { flipPrev: () => void } }).pageFlip().flipPrev();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -88,22 +96,6 @@ export default function Flipbook({ pdfUrl }: FlipbookProps) {
   const pageWidth = Math.max(315, calculatedWidth); // Ensure it doesn't go below minimum
   const pageHeight = Math.max(400, calculatedHeight);
 
-  if (!numPages) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <Document
-          file={pdfUrl}
-          onLoadSuccess={onDocumentLoadSuccess}
-          className="hidden"
-        />
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-12 rounded-full border-4 border-maroon-200 border-t-maroon-600 animate-spin mb-4" />
-          <p className="text-gray-500 font-medium mt-4">Loading Magazine...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div 
       className="flex flex-col items-center justify-center py-2 md:py-4 select-none w-full"
@@ -112,54 +104,74 @@ export default function Flipbook({ pdfUrl }: FlipbookProps) {
       onDragStart={(e) => e.preventDefault()}
     >
       <div className="bg-[#1a1a1a] p-2 md:p-6 rounded-xl shadow-2xl relative max-w-full overflow-hidden flex items-center justify-center">
-        {/* @ts-ignore - react-pageflip has outdated types */}
-        <HTMLFlipBook
-          ref={flipBookRef}
-          width={pageWidth}
-          height={pageHeight}
-          size="fixed"
-          minWidth={315}
-          maxWidth={1000}
-          minHeight={400}
-          maxHeight={1533}
-          drawShadow={true}
-          maxShadowOpacity={0.8}
-          showCover={true}
-          mobileScrollSupport={true}
-          usePortrait={isMobile}
-          onChangeState={(e: any) => {
-            if (e.data === 'flipping') {
-              playFlipSound();
-            }
-          }}
-          className="flipbook-demo"
-        >
-          {Array.from(new Array(numPages), (el, index) => {
-            const isLeftPage = index % 2 !== 0; // Page 2, 4, 6... (index 1, 3, 5...)
-            const isRightPage = index !== 0 && index % 2 === 0; // Page 3, 5, 7... (index 2, 4, 6...)
-            
-            return (
-              <div key={`page_${index + 1}`} className="bg-white overflow-hidden flex items-center justify-center relative">
-                <Document file={pdfUrl} loading={<div className="flex items-center justify-center h-full w-full bg-gray-100 text-gray-400 text-sm">Loading...</div>}>
-                  <Page 
-                    pageNumber={index + 1} 
-                    width={pageWidth} 
-                    renderTextLayer={false} 
-                    renderAnnotationLayer={false} 
-                  />
-                </Document>
-                
-                {/* Spine shadows for realistic book divider */}
-                {isLeftPage && (
-                  <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-black/30 to-transparent pointer-events-none z-10" />
-                )}
-                {isRightPage && (
-                  <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/30 to-transparent pointer-events-none z-10" />
-                )}
+        <Document 
+          file={pdfUrl} 
+          options={pdfOptions}
+          onLoadSuccess={onDocumentLoadSuccess}
+          loading={
+            <div 
+              className="flex flex-col items-center justify-center"
+              style={{ width: isMobile ? pageWidth : pageWidth * 2, height: pageHeight }}
+            >
+              <div className="animate-pulse flex flex-col items-center">
+                <div className="h-12 w-12 rounded-full border-4 border-maroon-500 border-t-white animate-spin mb-4" />
+                <p className="text-gray-400 font-medium mt-4">Loading Magazine...</p>
               </div>
-            );
-          })}
-        </HTMLFlipBook>
+            </div>
+          }
+        >
+          {numPages && (
+            /* @ts-expect-error - react-pageflip has outdated types */
+            <HTMLFlipBook
+              ref={flipBookRef}
+              width={pageWidth}
+              height={pageHeight}
+              size="fixed"
+              minWidth={315}
+              maxWidth={1000}
+              minHeight={400}
+              maxHeight={1533}
+              drawShadow={true}
+              maxShadowOpacity={0.8}
+              showCover={true}
+              mobileScrollSupport={true}
+              usePortrait={isMobile}
+              onChangeState={(e: { data: string }) => {
+                if (e.data === 'flipping') {
+                  playFlipSound();
+                }
+              }}
+              className="flipbook-demo"
+            >
+              {Array.from(new Array(numPages), (el, index) => {
+                const isLeftPage = index % 2 !== 0;
+                const isRightPage = index !== 0 && index % 2 === 0;
+                
+                return (
+                  <div key={`page_${index + 1}`} className="bg-white overflow-hidden flex items-center justify-center relative">
+                    <Page 
+                      pageNumber={index + 1} 
+                      width={pageWidth} 
+                      renderTextLayer={false} 
+                      renderAnnotationLayer={false} 
+                      renderMode="canvas"
+                      devicePixelRatio={typeof window !== 'undefined' ? window.devicePixelRatio || 2 : 2}
+                      loading={<div className="flex items-center justify-center h-full w-full bg-gray-100 text-gray-400 text-sm">Loading...</div>}
+                    />
+                    
+                    {/* Spine shadows for realistic book divider */}
+                    {isLeftPage && (
+                      <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-black/30 to-transparent pointer-events-none z-10" />
+                    )}
+                    {isRightPage && (
+                      <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/30 to-transparent pointer-events-none z-10" />
+                    )}
+                  </div>
+                );
+              })}
+            </HTMLFlipBook>
+          )}
+        </Document>
       </div>
       
       <p className="mt-6 text-gray-500 text-sm flex items-center gap-2">

@@ -11,14 +11,15 @@ export function QuizTaker({ category, competitionTitle, questions, schoolAccessI
   const answersRef = useRef<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
   
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(category.questionTimer || null);
 
   const [warningTimeLeft, setWarningTimeLeft] = useState<number | null>(null);
 
   const router = useRouter();
-  const timerRef = useRef<any>(null);
-  const warningTimerRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const warningTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const isSubmittingRef = useRef(false);
   const timeSavedPerQuestionRef = useRef<Record<number, number>>({});
@@ -85,6 +86,44 @@ export function QuizTaker({ category, competitionTitle, questions, schoolAccessI
     handleNextRef.current = handleNext;
   });
 
+  const STORAGE_KEY = `quiz_${slug}_${schoolAccessId}`;
+
+  // Restore state on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.submitted) {
+          setSubmitted(true);
+        } else {
+          setCurrentIndex(parsed.currentIndex || 0);
+          setAnswers(parsed.answers || {});
+          answersRef.current = parsed.answers || {};
+          timeSavedPerQuestionRef.current = parsed.timeSavedPerQuestion || {};
+          if (parsed.questionTimeLeft !== undefined && parsed.questionTimeLeft !== null) {
+            setQuestionTimeLeft(parsed.questionTimeLeft);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to restore quiz state", e);
+      }
+    }
+    setIsRestoring(false);
+  }, [slug, schoolAccessId, STORAGE_KEY]);
+
+  // Save state continuously
+  useEffect(() => {
+    if (isRestoring) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      currentIndex,
+      answers,
+      timeSavedPerQuestion: timeSavedPerQuestionRef.current,
+      questionTimeLeft,
+      submitted
+    }));
+  }, [currentIndex, answers, questionTimeLeft, submitted, isRestoring, STORAGE_KEY]);
+
   // Watch for main timer hitting 0
   useEffect(() => {
     if (questionTimeLeft === 0) {
@@ -92,16 +131,8 @@ export function QuizTaker({ category, competitionTitle, questions, schoolAccessI
     }
   }, [questionTimeLeft]);
 
-  // Watch for warning timer hitting 0
   useEffect(() => {
-    if (warningTimeLeft === 0) {
-      setWarningTimeLeft(null);
-      handleNextRef.current?.();
-    }
-  }, [warningTimeLeft]);
-
-  useEffect(() => {
-    if (submitted) return;
+    if (submitted || isRestoring) return;
 
     timerRef.current = setInterval(() => {
       setQuestionTimeLeft(prev => {
@@ -110,8 +141,10 @@ export function QuizTaker({ category, competitionTitle, questions, schoolAccessI
       });
     }, 1000);
 
-    return () => clearInterval(timerRef.current);
-  }, [currentIndex, answers, submitted]);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [currentIndex, answers, submitted, isRestoring]);
 
   useEffect(() => {
     const handleBlur = () => {
@@ -161,12 +194,18 @@ export function QuizTaker({ category, competitionTitle, questions, schoolAccessI
     warningTimerRef.current = setInterval(() => {
       setWarningTimeLeft(prev => {
         if (prev === null || prev <= 0) return prev;
+        if (prev - 1 === 0) {
+          setTimeout(() => handleNextRef.current?.(), 0);
+          return null;
+        }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(warningTimerRef.current);
-  }, [warningTimeLeft]);
+    return () => {
+      if (warningTimerRef.current) clearInterval(warningTimerRef.current);
+    };
+  }, [warningTimeLeft, competitionTitle]);
 
   useEffect(() => {
     if (submitted) {
@@ -195,6 +234,14 @@ export function QuizTaker({ category, competitionTitle, questions, schoolAccessI
           <h2 className="text-3xl font-bold mb-4">Quiz Submitted Successfully!</h2>
           <p className="text-lg">Thank you for participating.</p>
         </div>
+      </div>
+    );
+  }
+
+  if (isRestoring) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-gray-500 animate-pulse">Restoring your quiz session...</p>
       </div>
     );
   }
