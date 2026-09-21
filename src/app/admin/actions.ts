@@ -24,7 +24,6 @@ async function handleFileUpload(file: any): Promise<string | null> {
 // Posts
 export async function createPost(data: Record<string, any>) {
   const coverImage = await handleFileUpload(data.coverImage);
-  if (coverImage && oldRes.rows[0] && coverImage !== oldRes.rows[0].coverImage) await deleteOldBlob(oldRes.rows[0].coverImage);
   
   // Calculate reading time automatically
   const plainText = (data.content || "").replace(/<[^>]*>?/gm, '');
@@ -75,9 +74,6 @@ export async function createMagazine(data: Record<string, any>) {
   const coverThumbnail = await handleFileUpload(data.coverThumbnail);
   const outNowImage = await handleFileUpload(data.outNowImage);
   const pdfUrl = await handleFileUpload(data.pdfUrl);
-  if (coverThumbnail && oldRes.rows[0] && coverThumbnail !== oldRes.rows[0].coverThumbnail) await deleteOldBlob(oldRes.rows[0].coverThumbnail);
-  if (outNowImage && oldRes.rows[0] && outNowImage !== oldRes.rows[0].outNowImage) await deleteOldBlob(oldRes.rows[0].outNowImage);
-  if (pdfUrl && oldRes.rows[0] && pdfUrl !== oldRes.rows[0].pdfUrl) await deleteOldBlob(oldRes.rows[0].pdfUrl);
   
   const vol = data.volumeNumber || 1;
   const slug = `${data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-vol${vol}-issue${data.issueNumber}`;
