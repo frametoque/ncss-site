@@ -153,10 +153,10 @@ export function MagazineForm({ initialData, action }: MagazineFormProps) {
       }
 
       await action(formData);
-    } catch (err) {
+    } catch (err: any) {
       if (isRedirectError(err)) throw err;
       console.error(err);
-      alert("Failed to upload files. Please try again.");
+      alert("Failed to upload files: " + (err.message || "Unknown error"));
     } finally {
       setIsUploading(false);
     }
