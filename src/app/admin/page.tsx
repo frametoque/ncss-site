@@ -2,6 +2,8 @@ import pool from "@/lib/db";
 import Link from "next/link";
 import { Megaphone, FileText, BookOpen, Trophy, Users, ArrowRight, ClipboardList } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 async function getStats() {
   const [posts, magazines, competitions, team, formsTotal, formsActive] = await Promise.all([
     pool.query('SELECT count(*) FROM "post"'),
