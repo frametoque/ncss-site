@@ -64,3 +64,8 @@ export async function saveFormFields(formId: string, fields: any[]) {
   }
   revalidatePath(`/admin/forms/${formId}`);
 }
+
+export async function deleteSubmission(formId: string, submissionId: string) {
+  await pool.query('DELETE FROM "formSubmission" WHERE id = $1', [submissionId]);
+  revalidatePath(`/admin/forms/${formId}/submissions`);
+}

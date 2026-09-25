@@ -131,12 +131,7 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
               )}
             </ul>
 
-            {compItem.deadline && (
-              <div className="bg-gray-50 rounded-2xl p-4 text-center mb-6 border border-gray-100">
-                <p className="text-sm text-gray-500 mb-1">Registration Deadline</p>
-                <p className="font-bold text-gray-900">{formatDateString(compItem.deadline)}</p>
-              </div>
-            )}
+
 
             {compItem.rulesPdf && (
               <Button size="lg" variant="outline" className="w-full rounded-xl h-14 text-lg border-maroon-200 text-maroon-700 hover:bg-maroon-50 mb-4" asChild>

@@ -16,7 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const rawFields = fieldsRes.rows;
   
   let currentSection = "";
-  const fields = [];
+  const fields: any[] = [];
   for (const f of rawFields) {
     if (f.type === 'SECTION_DIVIDER') {
       currentSection = f.label;
