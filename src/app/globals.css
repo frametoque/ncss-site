@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@config "../../tailwind.config.mjs";
 
 @theme {
   --color-maroon-50: #fcf3f3;

@@ -13,13 +13,26 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const form = formRes.rows[0];
   
   const fieldsRes = await pool.query('SELECT * FROM "formField" WHERE "formId" = $1 ORDER BY "orderIndex" ASC', [id]);
-  const fields = fieldsRes.rows;
+  const rawFields = fieldsRes.rows;
+  
+  let currentSection = "";
+  const fields = [];
+  for (const f of rawFields) {
+    if (f.type === 'SECTION_DIVIDER') {
+      currentSection = f.label;
+    } else {
+      fields.push({
+        ...f,
+        displayLabel: currentSection ? `${currentSection} - ${f.label}` : f.label
+      });
+    }
+  }
   
   const subRes = await pool.query('SELECT * FROM "formSubmission" WHERE "formId" = $1 ORDER BY "createdAt" DESC', [id]);
   const submissions = subRes.rows;
 
   // Build CSV
-  const headerRow = ["Date", "Submitter Email", ...fields.map(f => `"${f.label.replace(/"/g, '""')}"`)];
+  const headerRow = ["Date", "Submitter Email", ...fields.map(f => `"${f.displayLabel.replace(/"/g, '""')}"`)];
   const rows = [headerRow.join(",")];
 
   for (const sub of submissions) {

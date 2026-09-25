@@ -72,7 +72,7 @@ export default async function NewsDetailsPage({ params }: { params: Params }) {
           </div>
           
           <div 
-            className="prose prose-lg prose-gray max-w-none prose-headings:font-heading prose-headings:font-bold prose-a:text-maroon-600 hover:prose-a:text-maroon-800 prose-blockquote:border-l-maroon-500 prose-blockquote:bg-maroon-50 prose-blockquote:p-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-gray-700 break-words whitespace-pre-wrap overflow-hidden"
+            className="prose prose-lg prose-gray max-w-none prose-headings:font-heading prose-headings:font-bold prose-a:text-maroon-600 hover:prose-a:text-maroon-800 prose-blockquote:border-l-maroon-500 prose-blockquote:bg-maroon-50 prose-blockquote:p-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-gray-700 break-words overflow-hidden"
             dangerouslySetInnerHTML={{ __html: newsItem.content }}
           />
         </div>

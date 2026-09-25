@@ -2,7 +2,7 @@ import { Calendar, MapPin, Trophy, Users, Clock, ArrowRight } from "lucide-react
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { isCompetitionEnded } from "@/lib/utils";
+import { isCompetitionEnded, formatDateString } from "@/lib/utils";
 import pool from "@/lib/db";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
@@ -69,7 +69,7 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
           )}
 
           <div
-            className="prose prose-lg prose-gray max-w-none prose-headings:font-heading prose-headings:font-bold prose-a:text-maroon-600 hover:prose-a:text-maroon-800 prose-ul:list-disc prose-li:marker:text-maroon-500 break-words whitespace-pre-wrap overflow-hidden"
+            className="prose prose-lg prose-gray max-w-none prose-headings:font-heading prose-headings:font-bold prose-a:text-maroon-600 hover:prose-a:text-maroon-800 prose-ul:list-disc prose-li:marker:text-maroon-500 break-words overflow-hidden"
             dangerouslySetInnerHTML={{ __html: compItem.content }}
           />
         </div>
@@ -89,7 +89,7 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">Date</p>
-                    <p className="text-gray-600">{compItem.date}</p>
+                    <p className="text-gray-600">{formatDateString(compItem.date)}</p>
                   </div>
                 </li>
               )}
@@ -101,7 +101,7 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">Deadline</p>
-                    <p className="text-gray-600">{compItem.deadline}</p>
+                    <p className="text-gray-600">{formatDateString(compItem.deadline)}</p>
                   </div>
                 </li>
               )}
@@ -134,7 +134,7 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
             {compItem.deadline && (
               <div className="bg-gray-50 rounded-2xl p-4 text-center mb-6 border border-gray-100">
                 <p className="text-sm text-gray-500 mb-1">Registration Deadline</p>
-                <p className="font-bold text-gray-900">{compItem.deadline}</p>
+                <p className="font-bold text-gray-900">{formatDateString(compItem.deadline)}</p>
               </div>
             )}
 

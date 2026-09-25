@@ -12,10 +12,10 @@ export async function createForm(data: { title: string; description: string; com
   return res.rows[0].id;
 }
 
-export async function updateForm(id: string, data: { title: string; description: string; competitionId: string | null; slug: string; isActive: boolean; limitOnePerEmail?: boolean }) {
+export async function updateForm(id: string, data: { title: string; description: string; competitionId: string | null; slug: string; isActive: boolean; limitOnePerEmail?: boolean; successMessage?: string | null }) {
   await pool.query(
-    'UPDATE "form" SET title = $1, description = $2, "competitionId" = $3, slug = $4, "isActive" = $5, "limitOnePerEmail" = $6, "updatedAt" = now() WHERE id = $7',
-    [data.title, data.description || null, data.competitionId || null, data.slug, data.isActive, data.limitOnePerEmail ?? false, id]
+    'UPDATE "form" SET title = $1, description = $2, "competitionId" = $3, slug = $4, "isActive" = $5, "limitOnePerEmail" = $6, "successMessage" = $7, "updatedAt" = now() WHERE id = $8',
+    [data.title, data.description || null, data.competitionId || null, data.slug, data.isActive, data.limitOnePerEmail ?? false, data.successMessage || null, id]
   );
   revalidatePath("/admin/forms");
   revalidatePath(`/admin/forms/${id}`);

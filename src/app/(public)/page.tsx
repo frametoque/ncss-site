@@ -10,7 +10,7 @@ import { MagazineCTA } from "@/components/sections/MagazineCTA";
 import { EKuppiyaCTA } from "@/components/sections/EKuppiyaCTA";
 import { InstagramSlider } from "@/components/ui/InstagramSlider";
 import pool from "@/lib/db";
-import { isCompetitionEnded } from "@/lib/utils";
+import { isCompetitionEnded, formatDateString } from "@/lib/utils";
 import { SlideUp } from "@/components/animations/SlideUp";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { StaggerContainer, StaggerItem } from "@/components/animations/StaggerGroup";
@@ -89,13 +89,13 @@ export default async function Home() {
             {upcomingCompetitions.map((comp) => (
               <StaggerItem key={comp.id}>
                 <Link href={`/competitions/${comp.slug}`} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group hover:-translate-y-1 flex flex-col h-full">
-                  <div className="aspect-square bg-gray-100 w-full relative overflow-hidden">
+                  <div className="bg-gray-100 w-full relative overflow-hidden">
                     <div className="absolute inset-0 bg-maroon-900/5 group-hover:bg-transparent transition-colors z-10" />
                     {comp.coverImage ? (
-                      <Image src={comp.coverImage} alt={comp.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <Image src={comp.coverImage} alt={comp.title} width={0} height={0} sizes="100vw" className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-gray-400 font-medium">
-                        1:1 Cover Image
+                      <div className="aspect-square flex items-center justify-center text-gray-400 font-medium">
+                        Cover Image
                       </div>
                     )}
                   </div>
@@ -105,7 +105,7 @@ export default async function Home() {
                     </h3>
                     <div className="flex items-center justify-center gap-2 mb-4 text-sm text-gray-500">
                       <Calendar className="h-4 w-4 text-maroon-500" />
-                      <span>{comp.deadline || comp.date}</span>
+                      <span>{formatDateString(comp.deadline || comp.date)}</span>
                     </div>
                     <div className="mt-auto pt-4 w-full border-t border-gray-100 flex justify-center">
                       <span className="text-maroon-600 text-sm font-bold inline-flex items-center group-hover:underline underline-offset-4">
