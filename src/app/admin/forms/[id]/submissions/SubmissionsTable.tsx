@@ -50,7 +50,21 @@ export default function SubmissionsTable({ fields, submissions, formId }: { fiel
                       const val = data[f.id];
                       return (
                         <td key={f.id} className="p-4 text-gray-800 max-w-xs truncate">
-                          {f.type === 'FILE' && val ? "File(s) uploaded" : String(val || '')}
+                          {f.type === 'FILE' && val ? (
+                            Array.isArray(val) ? (
+                              <div className="flex gap-2">
+                                {val.map((url: string, i: number) => (
+                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-maroon-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                                    File {i + 1}
+                                  </a>
+                                ))}
+                              </div>
+                            ) : (
+                              <a href={val} target="_blank" rel="noopener noreferrer" className="text-maroon-600 hover:underline" onClick={(e) => e.stopPropagation()}>View File</a>
+                            )
+                          ) : (
+                            String(val || '')
+                          )}
                         </td>
                       );
                     })}

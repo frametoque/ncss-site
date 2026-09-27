@@ -12,14 +12,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         // Here you could verify the user is logged in if you had auth
         // Since auth is skipped for now, we just allow the upload
         return {
-          allowedContentTypes: [
-            'image/jpeg',
-            'image/png',
-            'image/webp',
-            'image/gif',
-            'application/pdf',
-          ],
-          maximumSizeInBytes: 50 * 1024 * 1024, // 50MB limit
+          maximumSizeInBytes: 1024 * 1024 * 1024, // 1GB limit
           addRandomSuffix: true,
           // Keep tokens alive long enough for large uploads
           tokenPayload: JSON.stringify({

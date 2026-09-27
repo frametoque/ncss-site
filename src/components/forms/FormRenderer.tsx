@@ -4,9 +4,11 @@ import { useState, useRef } from "react";
 import { submitPublicForm } from "@/app/form-submit-action";
 import { Upload, X, File as FileIcon, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
+import { upload } from "@vercel/blob/client";
 
 export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File[]>>({});
@@ -69,21 +71,46 @@ export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
     try {
       const formData = new FormData(e.currentTarget);
       
-      fields.forEach(field => {
+      for (const field of fields) {
         if (field.type === 'FILE') {
           formData.delete(field.id);
           formData.delete(`${field.id}[]`);
           const files = selectedFiles[field.id] || [];
-          files.forEach(file => {
-            formData.append(field.id, file);
-          });
+          const config = typeof field.validation === 'string' ? JSON.parse(field.validation || '{}') : (field.validation || {});
+          
+          for (const file of files) {
+            // Validate constraints before upload
+            if (config.maxSizeMb && (file.size / (1024 * 1024)) > config.maxSizeMb) {
+              throw new Error(`File ${file.name} exceeds the maximum size of ${config.maxSizeMb}MB.`);
+            }
+            if (config.allowedFileTypes && config.allowedFileTypes.length > 0) {
+              const ext = "." + file.name.split('.').pop()?.toLowerCase();
+              if (!config.allowedFileTypes.includes(ext)) {
+                throw new Error(`File type ${ext} is not allowed for ${field.label}.`);
+              }
+            }
+            
+            // Upload directly from client
+            const newBlob = await upload(`submissions/${form.id}/${file.name}`, file, {
+              access: 'public',
+              handleUploadUrl: '/api/upload',
+              onUploadProgress: (progressEvent) => {
+                if (progressEvent.percentage != null) {
+                  setUploadProgress(progressEvent.percentage);
+                }
+              }
+            });
+            formData.append(field.id, newBlob.url);
+          }
         }
-      });
+      }
 
+      setUploadProgress(null);
       await submitPublicForm(form.id, formData);
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
+      setUploadProgress(null);
     }
     setIsSubmitting(false);
   };
@@ -333,7 +360,7 @@ export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
               disabled={isSubmitting}
               className="w-full md:w-auto px-8 py-3 bg-maroon-600 hover:bg-maroon-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm ml-auto"
             >
-              {isSubmitting ? "Submitting..." : "Submit"}
+              {isSubmitting ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : "Submitting...") : "Submit"}
             </button>
           ) : (
             <button 

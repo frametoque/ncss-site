@@ -51,7 +51,7 @@ function SortableFieldItem({ field, index, total, updateField, removeField, move
                   updateField(field.id, { 
                     type: t,
                     options: (!field.options && (t === "DROPDOWN" || t === "CHECKBOX")) ? '["Option 1", "Option 2"]' : field.options,
-                    validation: (!field.validation && t === "FILE") ? '{"allowedFileTypes": [".pdf", ".jpg", ".png"], "maxSizeMb": 5, "maxFiles": 1}' : (!field.validation && t === "CHECKBOX") ? '{"maxSelect": null}' : field.validation
+                    validation: (!field.validation && t === "FILE") ? '{"allowedFileTypes": [".pdf", ".jpg", ".png"], "maxSizeMb": 1024, "maxFiles": 1}' : (!field.validation && t === "CHECKBOX") ? '{"maxSelect": null}' : field.validation
                   });
                 }}
                 className="bg-maroon-100 text-maroon-800 text-xs font-bold pl-2 pr-6 py-1 rounded whitespace-nowrap outline-none cursor-pointer appearance-none hover:bg-maroon-200 transition-colors"
@@ -187,11 +187,11 @@ Option 3"
                   }
                 }}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-maroon-500 focus:border-maroon-500 outline-none transition-shadow"
-                placeholder="e.g. 5"
+                placeholder="e.g. 1024"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-700 block mb-1">Allowed Types</label>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">Allowed Types <span className="text-gray-400 font-normal">(Leave blank for any)</span></label>
               <input 
                 type="text" 
                 value={(() => {
@@ -202,11 +202,17 @@ Option 3"
                   const valStr = e.target.value;
                   let current = {};
                   try { current = JSON.parse(field.validation || '{}'); } catch {}
-                  const exts = valStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                  
+                  let exts: string[] = [];
+                  const lowerVal = valStr.trim().toLowerCase();
+                  if (lowerVal !== 'any' && lowerVal !== '*' && lowerVal !== 'all') {
+                    exts = valStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                  }
+                  
                   updateField(field.id, { validation: JSON.stringify({ ...current, allowedFileTypes: exts }) });
                 }}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-maroon-500 focus:border-maroon-500 outline-none transition-shadow"
-                placeholder=".pdf, .jpg, .png"
+                placeholder="e.g. .pdf, .jpg (or leave blank)"
               />
             </div>
           </div>
@@ -276,7 +282,7 @@ export default function FormBuilderClient({ form, initialFields, competitions }:
       placeholder: "",
       isRequired: false,
       options: (type === "DROPDOWN" || type === "CHECKBOX") ? '["Option 1", "Option 2"]' : null,
-      validation: type === "FILE" ? '{"allowedFileTypes": [".pdf", ".jpg", ".png"], "maxSizeMb": 5, "maxFiles": 1}' : type === "CHECKBOX" ? '{"maxSelect": null}' : null
+      validation: type === "FILE" ? '{"allowedFileTypes": [".pdf", ".jpg", ".png"], "maxSizeMb": 1024, "maxFiles": 1}' : type === "CHECKBOX" ? '{"maxSelect": null}' : null
     };
     if (typeof insertAt === 'number') {
       const newFields = [...fields];

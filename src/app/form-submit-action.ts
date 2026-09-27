@@ -29,40 +29,47 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       
       finalData[field.id] = values;
     } else if (field.type === 'FILE') {
-      const files = formData.getAll(field.id) as File[];
-      // Filter out any empty dummy files that might be submitted
-      const validFiles = files.filter(f => f && f.size > 0);
+      const items = formData.getAll(field.id);
       
-      if (isRequired && validFiles.length === 0) throw new Error(`Field ${field.label} is required.`);
+      const config = typeof field.validation === 'string' ? JSON.parse(field.validation || '{}') : (field.validation || {});
+      const maxFiles = config.maxFiles || 1;
       
-      if (validFiles.length > 0) {
-        const config = typeof field.validation === 'string' ? JSON.parse(field.validation || '{}') : (field.validation || {});
-        const maxFiles = config.maxFiles || 1;
-        
-        if (validFiles.length > maxFiles) {
-          throw new Error(`You can upload a maximum of ${maxFiles} files for ${field.label}.`);
-        }
-        
-        const uploadedUrls: string[] = [];
-        
-        for (const file of validFiles) {
-          // Validate constraints
-          if (config.maxSizeMb && (file.size / (1024 * 1024)) > config.maxSizeMb) {
-            throw new Error(`File ${file.name} exceeds the maximum size of ${config.maxSizeMb}MB.`);
+      const uploadedUrls: string[] = [];
+      let hasFiles = false;
+
+      for (const item of items) {
+        if (typeof item === 'string') {
+          if (item.trim() !== '') {
+            uploadedUrls.push(item);
+            hasFiles = true;
           }
-          if (config.allowedFileTypes && config.allowedFileTypes.length > 0) {
-            const ext = "." + file.name.split('.').pop()?.toLowerCase();
-            if (!config.allowedFileTypes.includes(ext)) {
-              throw new Error(`File type ${ext} is not allowed for ${field.label}.`);
+        } else if (item instanceof File) {
+          if (item.size > 0) {
+            hasFiles = true;
+            // Validate constraints
+            if (config.maxSizeMb && (item.size / (1024 * 1024)) > config.maxSizeMb) {
+              throw new Error(`File ${item.name} exceeds the maximum size of ${config.maxSizeMb}MB.`);
             }
+            if (config.allowedFileTypes && config.allowedFileTypes.length > 0) {
+              const ext = "." + item.name.split('.').pop()?.toLowerCase();
+              if (!config.allowedFileTypes.includes(ext)) {
+                throw new Error(`File type ${ext} is not allowed for ${field.label}.`);
+              }
+            }
+            // Upload to Vercel blob
+            const { url } = await put(`submissions/${formId}/${item.name}`, item, { access: 'public' });
+            uploadedUrls.push(url);
           }
-          
-          // Upload to Vercel blob
-          const { url } = await put(`submissions/${formId}/${file.name}`, file, { access: 'public' });
-          uploadedUrls.push(url);
         }
-        
-        // If maxFiles is 1, store as string (for backwards compatibility), otherwise store array
+      }
+
+      if (isRequired && !hasFiles) throw new Error(`Field ${field.label} is required.`);
+      
+      if (uploadedUrls.length > maxFiles) {
+        throw new Error(`You can upload a maximum of ${maxFiles} files for ${field.label}.`);
+      }
+      
+      if (uploadedUrls.length > 0) {
         finalData[field.id] = maxFiles === 1 ? uploadedUrls[0] : uploadedUrls;
       } else {
         finalData[field.id] = null;
