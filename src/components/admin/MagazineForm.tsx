@@ -243,7 +243,7 @@ export function MagazineForm({ initialData, action }: MagazineFormProps) {
             <label className="block text-sm font-medium text-maroon-800 mb-2">Thumbnail Preview</label>
             <div className="w-full aspect-[3/4] bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner">
               {thumbnailPreview ? (
-                <Image src={thumbnailPreview} alt="Cover Preview" fill className="object-cover" />
+                <Image src={thumbnailPreview} alt="Cover Preview" fill sizes="(max-width: 1024px) 100vw, 384px" className="object-cover" />
               ) : (
                 <span className="text-maroon-300 text-sm">No image</span>
               )}
@@ -265,7 +265,7 @@ export function MagazineForm({ initialData, action }: MagazineFormProps) {
             />
             <div className="w-full aspect-video mt-2 bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner">
               {outNowPreview ? (
-                <Image src={outNowPreview} alt="Promo Preview" fill className="object-contain" />
+                <Image src={outNowPreview} alt="Promo Preview" fill sizes="(max-width: 1024px) 100vw, 384px" className="object-contain" />
               ) : (
                 <span className="text-maroon-300 text-sm">No image</span>
               )}

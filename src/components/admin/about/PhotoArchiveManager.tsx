@@ -24,7 +24,7 @@ function SortableItem({ id, item, onDelete }: { id: string, item: any, onDelete:
 
   return (
     <div ref={setNodeRef} style={style} className="relative group cursor-grab active:cursor-grabbing aspect-square bg-gray-100 rounded-xl overflow-hidden shadow-sm border border-gray-200">
-      <Image src={item.photoUrl} alt="Archive" fill className="object-cover" />
+      <Image src={item.photoUrl} alt="Archive" fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" className="object-cover" />
       
       {/* Permanent delete button */}
       <button 

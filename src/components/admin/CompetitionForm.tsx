@@ -186,7 +186,7 @@ export function CompetitionForm({ initialData, action }: CompetitionFormProps) {
               <label className="block text-sm font-medium text-maroon-800">Cover Image Preview</label>
               <div className="w-full aspect-video bg-maroon-50 border border-maroon-100 rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner">
                 {coverPreview ? (
-                  <Image src={coverPreview} alt="Cover Preview" fill className="object-cover" />
+                  <Image src={coverPreview} alt="Cover Preview" fill sizes="(max-width: 1024px) 100vw, 384px" className="object-cover" />
                 ) : (
                   <span className="text-maroon-300 text-sm">No image</span>
                 )}

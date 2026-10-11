@@ -23,7 +23,7 @@ export async function InstagramSlider() {
           <div className="flex flex-col md:flex-row items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 p-0.5 flex-shrink-0">
               <div className="w-full h-full bg-white rounded-full p-0.5 relative overflow-hidden">
-                <Image src="/ig-dp.jpg" alt="Instagram DP" fill className="object-cover rounded-full" />
+                <Image src="/ig-dp.jpg" alt="Instagram DP" fill sizes="64px" className="object-cover rounded-full" />
               </div>
             </div>
             <div>

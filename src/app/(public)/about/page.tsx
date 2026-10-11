@@ -149,7 +149,7 @@ export default async function AboutPage() {
             </StaggerItem>
             <StaggerItem className="w-48 h-48 md:w-64 md:h-64 bg-maroon-950 rounded-2xl shrink-0 flex items-center justify-center border-4 border-maroon-800 relative z-10 shadow-2xl overflow-hidden transition-transform duration-500 hover:scale-105">
               {magFounder?.photoUrl ? (
-                <Image src={magFounder.photoUrl} alt="Founder Photo" fill className="object-cover" />
+                <Image src={magFounder.photoUrl} alt="Founder Photo" fill sizes="(max-width: 768px) 192px, 256px" className="object-cover" />
               ) : (
                 <span className="text-maroon-700 font-medium text-center px-4">Founder Photo / Cover Placeholder</span>
               )}

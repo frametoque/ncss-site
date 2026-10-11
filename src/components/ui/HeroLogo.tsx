@@ -39,6 +39,7 @@ export function HeroLogo() {
           alt="NCSS Logo" 
           width={300}
           height={300}
+          priority
           className="w-full h-full object-contain drop-shadow-[0_10px_15px_rgba(122,12,46,0.2)]"
           style={{ transform: "scale(1.2)", transformOrigin: "center" }}
         />
@@ -49,6 +50,7 @@ export function HeroLogo() {
           alt="" 
           width={300}
           height={300}
+          loading="eager"
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-contain pointer-events-none mix-blend-screen opacity-90"
           style={{ 

@@ -44,6 +44,7 @@ export async function MagazineCTA() {
               src={latest.outNowImage || "/publications/vol3-outnow.png"}
               alt={latest.title}
               fill
+              sizes="(max-width: 768px) 256px, 320px"
               className="object-cover"
             />
             {/* Binder edge */}

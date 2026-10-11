@@ -43,6 +43,7 @@ export function EKuppiyaCTA() {
               src="/kuppiya.webp"
               alt="NCSS E-KUPPIYA"
               fill
+              sizes="(max-width: 1024px) 100vw, 500px"
               className="object-cover"
             />
           </div>

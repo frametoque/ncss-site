@@ -33,7 +33,7 @@ export default async function MagazinesPage() {
           <StaggerItem key={mag.id} className="flex flex-col items-center group">
             <Link href={`/magazine/${mag.slug}`} className="block w-full aspect-[1/1.414] bg-gray-100 rounded-lg shadow-sm border border-gray-200 mb-4 relative overflow-hidden group-hover:shadow-md transition-shadow">
               {mag.coverThumbnail ? (
-                <Image src={mag.coverThumbnail} alt={mag.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                <Image src={mag.coverThumbnail} alt={mag.title} fill sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-gray-400">
                   Cover Art

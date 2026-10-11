@@ -312,7 +312,7 @@ export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
                                       <div className="w-12 h-12 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center border border-gray-200">
                                         {isImage ? (
                                           <div className="relative w-full h-full">
-                                            <Image src={URL.createObjectURL(file)} alt={file.name} fill className="object-cover" />
+                                            <Image src={URL.createObjectURL(file)} alt={file.name} fill sizes="48px" className="object-cover" />
                                           </div>
                                         ) : (
                                           <FileIcon className="w-6 h-6 text-gray-400" />
