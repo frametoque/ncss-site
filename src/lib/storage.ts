@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID!;
@@ -15,6 +15,66 @@ export const s3Client = new S3Client({
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
 });
+
+/**
+ * Checks whether an object key already exists in the bucket.
+ */
+export async function checkObjectExists(key: string): Promise<boolean> {
+  try {
+    await s3Client.send(new HeadObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+    }));
+    return true;
+  } catch (err: any) {
+    if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
+      return false;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Generates a unique key:
+ * - If the key does not exist yet: uses exact original key (report.pdf).
+ * - If a collision occurs: appends numerical suffix (report-2.pdf, report-3.pdf, etc.).
+ */
+export async function getUniqueKey(key: string): Promise<string> {
+  const cleanKey = key.replace(/^\/+/, '');
+  const exists = await checkObjectExists(cleanKey);
+  if (!exists) {
+    return cleanKey;
+  }
+
+  // Key already exists! Separate folder, base name, and extension
+  const lastSlashIndex = cleanKey.lastIndexOf('/');
+  const folder = lastSlashIndex !== -1 ? cleanKey.substring(0, lastSlashIndex) : '';
+  const filename = lastSlashIndex !== -1 ? cleanKey.substring(lastSlashIndex + 1) : cleanKey;
+
+  const dotIndex = filename.lastIndexOf('.');
+  const baseName = dotIndex !== -1 ? filename.substring(0, dotIndex) : filename;
+  const ext = dotIndex !== -1 ? filename.substring(dotIndex) : '';
+
+  // Try numerical suffix: filename-2.ext, filename-3.ext ...
+  let counter = 2;
+  while (counter <= 50) {
+    const candidateKey = folder
+      ? `${folder}/${baseName}-${counter}${ext}`
+      : `${baseName}-${counter}${ext}`;
+
+    const candidateExists = await checkObjectExists(candidateKey);
+    if (!candidateExists) {
+      return candidateKey;
+    }
+    counter++;
+  }
+
+  // Fallback if many collisions: append random 4-char suffix
+  const randomSuffix = Math.random().toString(36).substring(2, 6);
+  return folder
+    ? `${folder}/${baseName}-${randomSuffix}${ext}`
+    : `${baseName}-${randomSuffix}${ext}`;
+}
 
 /**
  * Returns the public URL for a given key.

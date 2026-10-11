@@ -1,12 +1,19 @@
 "use server";
 
 import pool from "@/lib/db";
-import { uploadFile } from "@/lib/storage";
+import { uploadFile, getUniqueKey } from "@/lib/storage";
 
 export async function submitPublicForm(formId: string, formData: FormData) {
   // Fetch form and fields to validate
   const formRes = await pool.query('SELECT * FROM "form" WHERE id = $1 AND "isActive" = true', [formId]);
   if (formRes.rowCount === 0) throw new Error("Form is not active or not found.");
+
+  const formRow = formRes.rows[0];
+  const formSlug = ((formRow.slug || formRow.title || formId) as string)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
   const fieldsRes = await pool.query('SELECT * FROM "formField" WHERE "formId" = $1', [formId]);
   const fields = fieldsRes.rows;
@@ -59,8 +66,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
             // Upload to Cloudflare R2
             const arrayBuffer = await item.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
-            const safeName = item.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-            const key = `submissions/${formId}/${Date.now()}-${safeName}`;
+            const key = await getUniqueKey(`form-submission/${formSlug}/${item.name}`);
             const url = await uploadFile(key, buffer, item.type || 'application/octet-stream');
             uploadedUrls.push(url);
           }

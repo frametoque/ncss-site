@@ -43,7 +43,7 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
       
       const uploadFile = async (file: File, onProgress?: (pct: number) => void): Promise<string> => {
         const { upload } = await import('@/lib/upload-client');
-        const res = await upload(file, onProgress ? (pct) => onProgress(pct) : undefined);
+        const res = await upload(`competitions/quiz/${file.name}`, file, onProgress ? (pct) => onProgress(pct) : undefined);
         return res.url;
       };
 

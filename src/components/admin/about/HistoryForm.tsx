@@ -56,7 +56,7 @@ export function HistoryForm({ sectionKey, initialData, hasImage = false }: Histo
       
       const uploadFile = async (file: File) => {
         const { upload } = await import('@/lib/upload-client');
-        const res = await upload(file);
+        const res = await upload(`about/history/${file.name}`, file);
         return res.url;
       };
 

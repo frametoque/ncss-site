@@ -2,7 +2,7 @@
 
 import pool from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { uploadFile, deleteFile } from "@/lib/storage";
+import { uploadFile, deleteFile, getUniqueKey } from "@/lib/storage";
 
 async function deleteOldBlob(url: string | null | undefined) {
   if (!url) return;
@@ -17,18 +17,18 @@ async function deleteOldBlob(url: string | null | undefined) {
   }
 }
 
-async function handleFileUpload(file: any): Promise<string | null> {
+async function handleFileUpload(file: any, folder: string = 'uploads'): Promise<string | null> {
   if (!file || typeof file === "string" || file.size === 0) return typeof file === "string" && file ? file : null;
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const key = `uploads/${Date.now()}-${safeName}`;
+  const originalName = file.name || 'file';
+  const key = await getUniqueKey(`${folder}/${originalName}`);
   return await uploadFile(key, buffer, file.type || 'application/octet-stream');
 }
 
 // Posts
 export async function createPost(data: Record<string, any>) {
-  const coverImage = await handleFileUpload(data.coverImage);
+  const coverImage = await handleFileUpload(data.coverImage, 'news');
   
   // Calculate reading time automatically
   const plainText = (data.content || "").replace(/<[^>]*>?/gm, '');
@@ -46,9 +46,7 @@ export async function createPost(data: Record<string, any>) {
 
 export async function updatePost(id: string, data: Record<string, any>) {
   const oldRes = await pool.query('SELECT "coverImage" FROM "post" WHERE id = $1', [id]);
-  // If coverImage is a string or empty, handleFileUpload returns it or null. 
-  // Wait, if it's not provided, we should probably fetch existing and keep it, but the form will pass the existing string if unchanged.
-  const coverImage = await handleFileUpload(data.coverImage);
+  const coverImage = await handleFileUpload(data.coverImage, 'news');
   if (coverImage && oldRes.rows[0] && coverImage !== oldRes.rows[0].coverImage) await deleteOldBlob(oldRes.rows[0].coverImage);
   
   // Calculate reading time automatically
@@ -76,9 +74,9 @@ export async function deletePost(id: string) {
 
 // Magazines
 export async function createMagazine(data: Record<string, any>) {
-  const coverThumbnail = await handleFileUpload(data.coverThumbnail);
-  const outNowImage = await handleFileUpload(data.outNowImage);
-  const pdfUrl = await handleFileUpload(data.pdfUrl);
+  const coverThumbnail = await handleFileUpload(data.coverThumbnail, 'magazine');
+  const outNowImage = await handleFileUpload(data.outNowImage, 'magazine');
+  const pdfUrl = await handleFileUpload(data.pdfUrl, 'magazine');
   
   const vol = data.volumeNumber || 1;
   const slug = `${data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-vol${vol}-issue${data.issueNumber}`;
@@ -95,9 +93,9 @@ export async function createMagazine(data: Record<string, any>) {
 
 export async function updateMagazine(id: string, data: Record<string, any>) {
   const oldRes = await pool.query('SELECT "coverThumbnail", "outNowImage", "pdfUrl" FROM "magazine" WHERE id = $1', [id]);
-  const coverThumbnail = await handleFileUpload(data.coverThumbnail);
-  const outNowImage = await handleFileUpload(data.outNowImage);
-  const pdfUrl = await handleFileUpload(data.pdfUrl);
+  const coverThumbnail = await handleFileUpload(data.coverThumbnail, 'magazine');
+  const outNowImage = await handleFileUpload(data.outNowImage, 'magazine');
+  const pdfUrl = await handleFileUpload(data.pdfUrl, 'magazine');
   if (coverThumbnail && oldRes.rows[0] && coverThumbnail !== oldRes.rows[0].coverThumbnail) await deleteOldBlob(oldRes.rows[0].coverThumbnail);
   if (outNowImage && oldRes.rows[0] && outNowImage !== oldRes.rows[0].outNowImage) await deleteOldBlob(oldRes.rows[0].outNowImage);
   if (pdfUrl && oldRes.rows[0] && pdfUrl !== oldRes.rows[0].pdfUrl) await deleteOldBlob(oldRes.rows[0].pdfUrl);
@@ -161,7 +159,7 @@ export async function deleteCompetition(id: string) {
 
 // Executive Board Members
 export async function createExecutiveBoardMember(data: Record<string, any>) {
-  const photoUrl = await handleFileUpload(data.photoUrl);
+  const photoUrl = await handleFileUpload(data.photoUrl, 'about/executive-board');
   await pool.query(
     'INSERT INTO "executiveBoard" (id, name, role, "photoUrl", "orderIndex", "contactNumber", "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, now(), now())',
     [data.name, data.role, photoUrl, data.orderIndex || 0, data.contactNumber || null]
@@ -172,7 +170,7 @@ export async function createExecutiveBoardMember(data: Record<string, any>) {
 }
 
 export async function updateExecutiveBoardMember(id: string, data: Record<string, any>) {
-  const photoUrl = await handleFileUpload(data.photoUrl);
+  const photoUrl = await handleFileUpload(data.photoUrl, 'about/executive-board');
   await pool.query(
     'UPDATE "executiveBoard" SET name = $1, role = $2, "photoUrl" = COALESCE($3, "photoUrl"), "contactNumber" = $4, "updatedAt" = now() WHERE id = $5',
     [data.name, data.role, photoUrl, data.contactNumber || null, id]
@@ -229,7 +227,7 @@ export async function updateCompetitionsOrder(orderedIds: string[]) {
 
 // History
 export async function updateHistorySection(sectionKey: string, data: Record<string, any>) {
-  const photoUrl = await handleFileUpload(data.photoUrl);
+  const photoUrl = await handleFileUpload(data.photoUrl, 'about/history');
   await pool.query(
     `INSERT INTO "history" (id, "sectionKey", title, content, "photoUrl")
      VALUES (gen_random_uuid()::text, $1, $2, $3, $4)
@@ -293,7 +291,7 @@ export async function deleteAnnualEvent(id: string) {
 
 // Photo Archive
 export async function createPhotoArchive(data: Record<string, any>) {
-  const photoUrl = await handleFileUpload(data.photoUrl);
+  const photoUrl = await handleFileUpload(data.photoUrl, 'about/photo-archive');
   if (!photoUrl) return; // Prevent empty image creations
   await pool.query(
     'INSERT INTO "photoArchive" (id, "photoUrl", "orderIndex") VALUES (gen_random_uuid()::text, $1, $2)',

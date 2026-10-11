@@ -91,7 +91,13 @@ export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
             }
             
             // Upload directly from client
-            const newBlob = await upload(`submissions/${form.id}/${file.name}`, file, {
+            const formSlug = ((form.slug || form.title || form.id) as string)
+              .toLowerCase()
+              .trim()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-+|-+$/g, '');
+
+            const newBlob = await upload(`form-submission/${formSlug}/${file.name}`, file, {
               access: 'public',
               handleUploadUrl: '/api/upload',
               onUploadProgress: (progressEvent) => {

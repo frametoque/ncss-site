@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { uploadFile, getPresignedUploadUrl } from '@/lib/storage';
+import { uploadFile, getPresignedUploadUrl, getUniqueKey } from '@/lib/storage';
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -15,20 +15,19 @@ export async function POST(request: Request): Promise<NextResponse> {
         return NextResponse.json({ error: 'No file provided in form data' }, { status: 400 });
       }
 
-      const name = file.name || 'file';
-      const safeName = name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const randomSuffix = Math.random().toString(36).substring(2, 9);
+      // Preserve exact original filename provided by user
+      const originalName = file.name || 'file';
 
-      let key = '';
+      let desiredKey = '';
       if (pathname) {
-        const parts = pathname.split('/');
-        parts.pop();
-        const folder = parts.join('/');
-        key = folder ? `${folder}/${Date.now()}-${randomSuffix}_${safeName}` : `${Date.now()}-${randomSuffix}_${safeName}`;
+        // If caller passed a structured path like submissions/<formId>/<filename>, use it directly
+        desiredKey = pathname;
       } else {
-        key = `uploads/${Date.now()}-${randomSuffix}_${safeName}`;
+        desiredKey = `uploads/${originalName}`;
       }
-      key = key.replace(/^\/+/, '');
+
+      // Check collision and assign unique key (original name first, or -2, -3 if collision)
+      const key = await getUniqueKey(desiredKey);
 
       const buffer = Buffer.from(await file.arrayBuffer());
       const publicUrl = await uploadFile(key, buffer, file.type || 'application/octet-stream');
@@ -49,23 +48,19 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ error: 'filename or pathname is required' }, { status: 400 });
     }
 
-    const name = filename || pathname.split('/').pop() || 'file';
-    const safeName = name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const randomSuffix = Math.random().toString(36).substring(2, 9);
+    // Preserve exact original filename provided by user
+    const originalName = filename || pathname.split('/').pop() || 'file';
 
-    let key = '';
+    let desiredKey = '';
     if (pathname) {
-      // Keep similar structure: folder/safeName-randomSuffix.ext
-      const parts = pathname.split('/');
-      parts.pop();
-      const folder = parts.join('/');
-      key = folder ? `${folder}/${Date.now()}-${randomSuffix}_${safeName}` : `${Date.now()}-${randomSuffix}_${safeName}`;
+      // If caller passed a structured path like submissions/<formId>/<filename>, use it directly
+      desiredKey = pathname;
     } else {
-      key = `uploads/${Date.now()}-${randomSuffix}_${safeName}`;
+      desiredKey = `uploads/${originalName}`;
     }
 
-    // Clean key (no leading slash)
-    key = key.replace(/^\/+/, '');
+    // Check collision and assign unique key (original name first, or -2, -3 if collision)
+    const key = await getUniqueKey(desiredKey);
 
     const type = contentType || 'application/octet-stream';
     const url = await getPresignedUploadUrl(key, type);
@@ -76,7 +71,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       url, 
       key, 
       publicUrl,
-      // Provide compatibility with vercel blob client response structure if needed
       blob: { url: publicUrl, pathname: key }
     });
   } catch (error: any) {

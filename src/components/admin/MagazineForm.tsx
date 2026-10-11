@@ -115,7 +115,7 @@ export function MagazineForm({ initialData, action }: MagazineFormProps) {
 
       const uploadFileWithProgress = async (file: File, onProgress?: (pct: number) => void): Promise<string> => {
         const { upload } = await import('@/lib/upload-client');
-        const res = await upload(file, onProgress ? (pct) => onProgress(pct) : undefined);
+        const res = await upload(`magazine/${file.name}`, file, onProgress ? (pct) => onProgress(pct) : undefined);
         return res.url;
       };
 

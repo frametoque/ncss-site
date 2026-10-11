@@ -92,7 +92,7 @@ export function PhotoArchiveManager({ initialData = [] }: { initialData: any[] }
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const { upload } = await import('@/lib/upload-client');
-        const res = await upload(file);
+        const res = await upload(`about/photo-archive/${file.name}`, file);
         
         await createPhotoArchive({
           photoUrl: res.url,
