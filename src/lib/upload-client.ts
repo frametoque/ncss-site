@@ -35,18 +35,29 @@ export async function uploadToR2(
     }
   }
 
-  // Upload via Next.js API route using FormData with progress tracking
-  // This completely eliminates CORS issues because the upload goes to the same origin (/api/upload),
-  // which forwards directly to R2 using server-side S3 client.
+  // 1. Request presigned upload URL from our API route
+  const res = await fetch('/api/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filename: file.name,
+      pathname,
+      contentType: file.type || 'application/octet-stream',
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to get upload URL');
+  }
+
+  const { url, publicUrl } = await res.json();
+
+  // 2. Upload file directly to Cloudflare R2 (handles up to 5GB without touching Next.js server limits)
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/upload', true);
-
-    const formData = new FormData();
-    formData.append('file', file);
-    if (pathname) {
-      formData.append('pathname', pathname);
-    }
+    xhr.open('PUT', url, true);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
 
     if (xhr.upload && onProgress) {
       xhr.upload.onprogress = (e) => {
@@ -59,27 +70,17 @@ export async function uploadToR2(
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const res = JSON.parse(xhr.responseText);
-          resolve({ url: res.publicUrl || res.url });
-        } catch {
-          reject(new Error('Invalid response from upload server'));
-        }
+        resolve({ url: publicUrl });
       } else {
-        try {
-          const res = JSON.parse(xhr.responseText);
-          reject(new Error(res.error || `Upload failed with status ${xhr.status}`));
-        } catch {
-          reject(new Error(`Upload failed with status ${xhr.status}`));
-        }
+        reject(new Error(`Upload failed with status ${xhr.status}`));
       }
     };
 
     xhr.onerror = () => {
-      reject(new Error('Network error during file upload'));
+      reject(new Error('Network error during file upload. Please ensure R2 CORS is configured in Cloudflare Dashboard.'));
     };
 
-    xhr.send(formData);
+    xhr.send(file);
   });
 }
 
