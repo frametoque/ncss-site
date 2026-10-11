@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cookies } from "next/headers";
 
-export default async function QuizAccessPage({ params, searchParams }: { params: { slug: string, categoryId: string }, searchParams: { error?: string } }) {
+export default async function QuizAccessPage({ params, searchParams }: { params: Promise<{ slug: string, categoryId: string }>, searchParams: Promise<{ error?: string }> }) {
   const { slug, categoryId } = await params;
   const { error } = await searchParams;
 

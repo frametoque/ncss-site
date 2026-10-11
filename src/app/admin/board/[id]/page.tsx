@@ -5,7 +5,7 @@ import pool from "@/lib/db";
 import { redirect } from "next/navigation";
 import { BoardForm } from "@/components/admin/BoardForm";
 
-export default async function EditBoardMember({ params }: { params: { id: string } }) {
+export default async function EditBoardMember({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const res = await pool.query('SELECT * FROM "executiveBoard" WHERE id = $1', [id]);
   const member = res.rows[0];

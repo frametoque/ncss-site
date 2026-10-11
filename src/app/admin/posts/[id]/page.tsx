@@ -3,7 +3,7 @@ import { PostForm } from "@/components/admin/PostForm";
 import pool from "@/lib/db";
 import { redirect } from "next/navigation";
 
-export default async function EditPost({ params }: { params: { id: string } }) {
+export default async function EditPost({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const res = await pool.query('SELECT * FROM "post" WHERE id = $1', [id]);
   const post = res.rows[0];

@@ -1,37 +1,47 @@
-import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
+import { getPresignedUploadUrl } from '@/lib/storage';
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
-
   try {
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (pathname) => {
-        // Here you could verify the user is logged in if you had auth
-        // Since auth is skipped for now, we just allow the upload
-        return {
-          maximumSizeInBytes: 1024 * 1024 * 1024, // 1GB limit
-          addRandomSuffix: true,
-          // Keep tokens alive long enough for large uploads
-          tokenPayload: JSON.stringify({
-            // Any custom metadata you want to attach
-          }),
-        };
-      },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        // Fired after the upload is complete
-        // Log removed for production
-      },
-    });
+    const body = await request.json();
+    const { filename, contentType, pathname } = body;
 
-    return NextResponse.json(jsonResponse);
-  } catch (error) {
-    console.error("Vercel Blob Client Upload Error:", error);
-    return NextResponse.json(
-      { error: (error as Error).message },
-      { status: 400 },
-    );
+    if (!filename && !pathname) {
+      return NextResponse.json({ error: 'filename or pathname is required' }, { status: 400 });
+    }
+
+    const name = filename || pathname.split('/').pop() || 'file';
+    const safeName = name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const randomSuffix = Math.random().toString(36).substring(2, 9);
+
+    let key = '';
+    if (pathname) {
+      // Keep similar structure: folder/safeName-randomSuffix.ext
+      const parts = pathname.split('/');
+      parts.pop();
+      const folder = parts.join('/');
+      key = folder ? `${folder}/${Date.now()}-${randomSuffix}_${safeName}` : `${Date.now()}-${randomSuffix}_${safeName}`;
+    } else {
+      key = `uploads/${Date.now()}-${randomSuffix}_${safeName}`;
+    }
+
+    // Clean key (no leading slash)
+    key = key.replace(/^\/+/, '');
+
+    const type = contentType || 'application/octet-stream';
+    const url = await getPresignedUploadUrl(key, type);
+
+    const publicUrl = `${(process.env.R2_PUBLIC_URL || '').replace(/\/+$/, '')}/${key}`;
+
+    return NextResponse.json({ 
+      url, 
+      key, 
+      publicUrl,
+      // Provide compatibility with vercel blob client response structure if needed
+      blob: { url: publicUrl, pathname: key }
+    });
+  } catch (error: any) {
+    console.error("Presigned URL Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

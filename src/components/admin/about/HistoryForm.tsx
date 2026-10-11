@@ -55,12 +55,9 @@ export function HistoryForm({ sectionKey, initialData, hasImage = false }: Histo
       const formData = new FormData(e.currentTarget);
       
       const uploadFile = async (file: File) => {
-        const { upload } = await import('@vercel/blob/client');
-        const blob = await upload(file.name, file, {
-          access: 'public',
-          handleUploadUrl: '/api/upload'
-        });
-        return blob.url;
+        const { upload } = await import('@/lib/upload-client');
+        const res = await upload(file);
+        return res.url;
       };
 
       const file = fileInputRef.current?.files?.[0];

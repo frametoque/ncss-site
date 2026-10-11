@@ -1,7 +1,7 @@
 "use server";
 
 import pool from "@/lib/db";
-import { put } from "@vercel/blob";
+import { uploadFile } from "@/lib/storage";
 
 export async function submitPublicForm(formId: string, formData: FormData) {
   // Fetch form and fields to validate
@@ -56,8 +56,12 @@ export async function submitPublicForm(formId: string, formData: FormData) {
                 throw new Error(`File type ${ext} is not allowed for ${field.label}.`);
               }
             }
-            // Upload to Vercel blob
-            const { url } = await put(`submissions/${formId}/${item.name}`, item, { access: 'public' });
+            // Upload to Cloudflare R2
+            const arrayBuffer = await item.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const safeName = item.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const key = `submissions/${formId}/${Date.now()}-${safeName}`;
+            const url = await uploadFile(key, buffer, item.type || 'application/octet-stream');
             uploadedUrls.push(url);
           }
         }

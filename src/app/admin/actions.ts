@@ -2,23 +2,28 @@
 
 import pool from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { put, del } from "@vercel/blob";
-
+import { uploadFile, deleteFile } from "@/lib/storage";
 
 async function deleteOldBlob(url: string | null | undefined) {
-  if (url && url.includes('public.blob.vercel-storage.com')) {
-    try {
-      await del(url);
-    } catch (e) {
-      console.error('Failed to delete blob', url, e);
+  if (!url) return;
+  try {
+    const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/+$/, '');
+    if (publicUrl && url.startsWith(publicUrl)) {
+      const key = url.replace(`${publicUrl}/`, '');
+      await deleteFile(key);
     }
+  } catch (e) {
+    console.error('Failed to delete file from R2', url, e);
   }
 }
 
 async function handleFileUpload(file: any): Promise<string | null> {
   if (!file || typeof file === "string" || file.size === 0) return typeof file === "string" && file ? file : null;
-  const { url } = await put(file.name, file, { access: 'public' });
-  return url;
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const key = `uploads/${Date.now()}-${safeName}`;
+  return await uploadFile(key, buffer, file.type || 'application/octet-stream');
 }
 
 // Posts

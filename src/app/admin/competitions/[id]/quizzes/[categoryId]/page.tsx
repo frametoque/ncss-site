@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { QuizManager } from "@/components/admin/QuizManager";
 
-export default async function CategoryPage({ params }: { params: { id: string, categoryId: string } }) {
+export default async function CategoryPage({ params }: { params: Promise<{ id: string, categoryId: string }> }) {
   const { id, categoryId } = await params;
   const category = await getQuizCategory(categoryId);
   const questions = await getQuizQuestions(categoryId);

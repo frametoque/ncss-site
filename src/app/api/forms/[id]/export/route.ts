@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { rewriteDataUrls } from '@/lib/storage';
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const rows = [headerRow.join(",")];
 
   for (const sub of submissions) {
-    const data = typeof sub.data === 'string' ? JSON.parse(sub.data) : sub.data;
+    const rawData = typeof sub.data === 'string' ? JSON.parse(sub.data) : sub.data;
+    const data = rewriteDataUrls(rawData);
     const row = [
       `"${new Date(sub.createdAt).toISOString()}"`,
       `"${String(sub.submitterEmail || '').replace(/"/g, '""')}"`,

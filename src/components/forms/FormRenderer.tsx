@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { submitPublicForm } from "@/app/form-submit-action";
 import { Upload, X, File as FileIcon, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
-import { upload } from "@vercel/blob/client";
+import { upload } from "@/lib/upload-client";
 
 export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -114,20 +114,12 @@ export function MagazineForm({ initialData, action }: MagazineFormProps) {
       const formData = new FormData(e.currentTarget);
 
       const uploadFileWithProgress = async (file: File, onProgress?: (pct: number) => void): Promise<string> => {
-        const { upload } = await import('@vercel/blob/client');
-        const blob = await upload(file.name, file, {
-          access: 'public',
-          handleUploadUrl: '/api/upload',
-          onUploadProgress: (progressEvent) => {
-            if (onProgress) {
-              onProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
-            }
-          }
-        });
-        return blob.url;
+        const { upload } = await import('@/lib/upload-client');
+        const res = await upload(file, onProgress ? (pct) => onProgress(pct) : undefined);
+        return res.url;
       };
 
-      // Direct Client Uploads to Vercel Blob
+      // Direct Client Uploads to R2
       const uploadFile = async (fieldName: string, fileRef: React.RefObject<HTMLInputElement | null>) => {
         const file = fileRef.current?.files?.[0];
         if (file) {

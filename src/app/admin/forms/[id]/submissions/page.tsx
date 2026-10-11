@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Download } from "lucide-react";
 import SubmissionsTable from "./SubmissionsTable";
+import { rewriteDataUrls } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,10 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ id
   }
 
   const subRes = await pool.query('SELECT * FROM "formSubmission" WHERE "formId" = $1 ORDER BY "createdAt" DESC', [id]);
-  const submissions = subRes.rows;
+  const submissions = subRes.rows.map(row => ({
+    ...row,
+    data: rewriteDataUrls(row.data)
+  }));
 
   return (
     <div className="space-y-6">

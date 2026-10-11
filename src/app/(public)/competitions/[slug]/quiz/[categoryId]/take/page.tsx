@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { QuizTaker } from "@/components/public/QuizTaker";
 import { cookies } from "next/headers";
 
-export default async function TakeQuizPage({ params }: { params: { slug: string, categoryId: string } }) {
+export default async function TakeQuizPage({ params }: { params: Promise<{ slug: string, categoryId: string }> }) {
   const { slug, categoryId } = await params;
   
   const cookieStore = await cookies();

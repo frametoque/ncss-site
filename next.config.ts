@@ -17,6 +17,16 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "**.r2.dev",
+        port: "",
+      },
+      {
+        protocol: "https",
+        hostname: "**.r2.cloudflarestorage.com",
+        port: "",
+      },
+      {
+        protocol: "https",
         hostname: "**.fbcdn.net",
         port: "",
       },

@@ -5,7 +5,7 @@ import { SchoolAccessManager } from "@/components/admin/SchoolAccessManager";
 import { AcceptAnswersToggle } from "@/components/admin/AcceptAnswersToggle";
 import pool from "@/lib/db";
 
-export default async function QuizzesPage({ params }: { params: { id: string } }) {
+export default async function QuizzesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const categories = await getQuizCategories(id);
   const accesses = await getSchoolAccesses(id);

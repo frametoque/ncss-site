@@ -2,7 +2,7 @@ import { getQuizCategory, getQuizSubmissions, getQuizQuestions } from "../../act
 import Link from "next/link";
 import { CheckCircle2, XCircle, MinusCircle } from "lucide-react";
 
-export default async function SubmissionsPage({ params }: { params: { id: string, categoryId: string } }) {
+export default async function SubmissionsPage({ params }: { params: Promise<{ id: string, categoryId: string }> }) {
   const { id, categoryId } = await params;
   const category = await getQuizCategory(categoryId);
   const submissions = await getQuizSubmissions(categoryId);

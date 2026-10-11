@@ -42,17 +42,9 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
       const finalQuestions = [...questions];
       
       const uploadFile = async (file: File, onProgress?: (pct: number) => void): Promise<string> => {
-        const { upload } = await import('@vercel/blob/client');
-        const blob = await upload(file.name, file, {
-          access: 'public',
-          handleUploadUrl: '/api/upload',
-          onUploadProgress: (progressEvent) => {
-            if (onProgress) {
-              onProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
-            }
-          }
-        });
-        return blob.url;
+        const { upload } = await import('@/lib/upload-client');
+        const res = await upload(file, onProgress ? (pct) => onProgress(pct) : undefined);
+        return res.url;
       };
 
       for (let i = 0; i < finalQuestions.length; i++) {

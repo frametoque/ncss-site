@@ -3,7 +3,7 @@ import { CompetitionForm } from "@/components/admin/CompetitionForm";
 import pool from "@/lib/db";
 import { redirect } from "next/navigation";
 
-export default async function EditCompetition({ params }: { params: { id: string } }) {
+export default async function EditCompetition({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const res = await pool.query('SELECT * FROM "competition" WHERE id = $1', [id]);
   const comp = res.rows[0];

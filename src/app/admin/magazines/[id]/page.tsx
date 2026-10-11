@@ -3,7 +3,7 @@ import { MagazineForm } from "@/components/admin/MagazineForm";
 import pool from "@/lib/db";
 import { redirect } from "next/navigation";
 
-export default async function EditMagazine({ params }: { params: { id: string } }) {
+export default async function EditMagazine({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const res = await pool.query('SELECT * FROM "magazine" WHERE id = $1', [id]);
   const mag = res.rows[0];
