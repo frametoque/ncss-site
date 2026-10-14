@@ -1,7 +1,13 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { saveSchoolAccesses } from "@/app/admin/competitions/[id]/quizzes/actions";
+import React, { useState, useMemo, useEffect } from "react";
+import { 
+  saveSchoolAccesses, 
+  importSchoolsFromForm, 
+  getFormSchoolCandidates, 
+  importSelectedSchools, 
+  RegisteredSchoolCandidate 
+} from "@/app/admin/competitions/[id]/quizzes/actions";
 import { useRouter } from "next/navigation";
 import { 
   Plus, 
@@ -11,7 +17,8 @@ import {
   Check, 
   AlertCircle, 
   Sparkles,
-  Users
+  Download,
+  X
 } from "lucide-react";
 
 interface Category {
@@ -31,12 +38,14 @@ export function SchoolAccessManager({
   competitionId, 
   categories = [], 
   initialAccesses = [],
-  selectedCategoryId
+  selectedCategoryId,
+  linkedForms = []
 }: { 
   competitionId: string;
   categories: Category[];
   initialAccesses: any[];
   selectedCategoryId?: string;
+  linkedForms?: { id: string; title: string }[];
 }) {
   const router = useRouter();
 
@@ -52,9 +61,28 @@ export function SchoolAccessManager({
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [copiedSubject, setCopiedSubject] = useState(false);
   const [newSchoolNameModal, setNewSchoolNameModal] = useState("");
   const [showAddToAllModal, setShowAddToAllModal] = useState(false);
+
+  // Modal for Sync from Registrations
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
+  const [candidates, setCandidates] = useState<RegisteredSchoolCandidate[]>([]);
+  const [selectedCandidateNames, setSelectedCandidateNames] = useState<Set<string>>(new Set());
+  const [candidateFilterTab, setCandidateFilterTab] = useState<"pending" | "all">("pending");
+
+  // Prevent background scrolling when sync modal is open
+  useEffect(() => {
+    if (showSyncModal) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [showSyncModal]);
 
   // Helper to generate a unique random code that doesn't conflict with existing codes in the competition
   const generateUniqueCode = (existingCodesSet: Set<string>): string => {
@@ -195,6 +223,81 @@ export function SchoolAccessManager({
     setAccesses(prev => prev.filter((_, i) => i !== targetIndex));
   };
 
+  // Open Sync Modal and load candidates from registration form
+  const openSyncModal = async () => {
+    if (linkedForms.length === 0) return;
+    setShowSyncModal(true);
+    setIsLoadingCandidates(true);
+    try {
+      const data = await getFormSchoolCandidates(competitionId, linkedForms[0].id);
+      setCandidates(data);
+      
+      const pendingSchools = data.filter(c => !c.isAlreadyAdded);
+      setSelectedCandidateNames(new Set(pendingSchools.map(c => c.schoolName)));
+      setCandidateFilterTab("pending");
+    } catch (err: any) {
+      alert(`Failed to load registrations: ${err.message || "Unknown error"}`);
+      setShowSyncModal(false);
+    } finally {
+      setIsLoadingCandidates(false);
+    }
+  };
+
+  const toggleSelectCandidate = (name: string) => {
+    setSelectedCandidateNames(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
+
+  const selectAllVisibleCandidates = (names: string[]) => {
+    setSelectedCandidateNames(prev => {
+      const next = new Set(prev);
+      names.forEach(n => next.add(n));
+      return next;
+    });
+  };
+
+  const deselectAllVisibleCandidates = (names: string[]) => {
+    setSelectedCandidateNames(prev => {
+      const next = new Set(prev);
+      names.forEach(n => next.delete(n));
+      return next;
+    });
+  };
+
+  const handleImportSelected = async () => {
+    if (selectedCandidateNames.size === 0 || isImporting) return;
+    setIsImporting(true);
+    try {
+      const res = await importSelectedSchools(competitionId, Array.from(selectedCandidateNames));
+      alert(`Successfully added ${res.count} school entries across all subjects!`);
+      setShowSyncModal(false);
+      router.refresh();
+    } catch (e: any) {
+      alert(`Failed to import schools: ${e.message || "Unknown error"}`);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Filtered candidate list based on active tab ("pending" vs "all")
+  const visibleCandidates = useMemo(() => {
+    if (candidateFilterTab === "pending") {
+      return candidates.filter(c => !c.isAlreadyAdded);
+    }
+    return candidates;
+  }, [candidates, candidateFilterTab]);
+
+  const visibleCandidateNames = useMemo(() => {
+    return visibleCandidates.map(c => c.schoolName);
+  }, [visibleCandidates]);
+
   // Save changes
   const saveCurrentAccesses = async (onlyCurrentCategory: boolean = true) => {
     if (duplicateCodes.size > 0) {
@@ -285,12 +388,25 @@ export function SchoolAccessManager({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {linkedForms.length > 0 && (
+            <button
+              type="button"
+              onClick={openSyncModal}
+              disabled={isImporting}
+              className="px-3 py-1.5 bg-maroon-50 text-maroon-800 rounded-lg text-xs font-semibold hover:bg-maroon-100 border border-maroon-200 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              title={`Review and sync registered schools from ${linkedForms[0].title}`}
+            >
+              <Download className="w-3.5 h-3.5" />
+              Sync from Registrations
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowAddToAllModal(true)}
             className="px-3 py-1.5 bg-maroon-50 text-maroon-800 rounded-lg text-xs font-semibold hover:bg-maroon-100 border border-maroon-200 flex items-center gap-1.5 transition-colors"
           >
-            <Users className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" />
             Add School to All Subjects
           </button>
           
@@ -355,6 +471,197 @@ export function SchoolAccessManager({
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Sync schools from registration form */}
+      {showSyncModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs overscroll-contain"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSyncModal(false);
+          }}
+        >
+          <div 
+            data-lenis-prevent="true"
+            className="bg-white rounded-2xl shadow-2xl border border-maroon-100 w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden overscroll-contain"
+          >
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-maroon-50/70 to-white">
+              <div>
+                <h3 className="text-base font-bold text-maroon-900">Sync Schools from Registrations</h3>
+                <p className="text-xs text-maroon-700/70">
+                  {linkedForms[0]?.title || "Registration Form"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSyncModal(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            {isLoadingCandidates ? (
+              <div className="p-12 text-center text-maroon-700 space-y-3">
+                <div className="w-8 h-8 border-3 border-maroon-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-sm font-medium">Scanning registration form for schools...</p>
+              </div>
+            ) : (
+              <>
+                {/* Tabs & Search Toolbar */}
+                <div className="p-4 border-b border-gray-100 space-y-3 bg-gray-50/50">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="flex items-center gap-1 bg-gray-200/70 p-1 rounded-xl text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setCandidateFilterTab("pending")}
+                        className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                          candidateFilterTab === "pending"
+                            ? "bg-white text-maroon-900 shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        <span>Pending to Add</span>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          candidateFilterTab === "pending" ? "bg-maroon-100 text-maroon-900" : "bg-gray-300 text-gray-700"
+                        }`}>
+                          {candidates.filter(c => !c.isAlreadyAdded).length}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCandidateFilterTab("all")}
+                        className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                          candidateFilterTab === "all"
+                            ? "bg-white text-maroon-900 shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        <span>All Registered</span>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          candidateFilterTab === "all" ? "bg-maroon-100 text-maroon-900" : "bg-gray-300 text-gray-700"
+                        }`}>
+                          {candidates.length}
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => selectAllVisibleCandidates(visibleCandidateNames)}
+                        className="text-maroon-800 hover:underline font-semibold cursor-pointer"
+                      >
+                        Select All
+                      </button>
+                      <span className="text-gray-300">•</span>
+                      <button
+                        type="button"
+                        onClick={() => deselectAllVisibleCandidates(visibleCandidateNames)}
+                        className="text-gray-600 hover:underline font-medium cursor-pointer"
+                      >
+                        Uncheck All
+                      </button>
+                      <span className="text-gray-300">•</span>
+                      <span className="text-xs font-bold text-maroon-900 bg-maroon-100 px-2 py-0.5 rounded-md">
+                        {selectedCandidateNames.size} selected
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Candidate list */}
+                <div 
+                  data-lenis-prevent="true"
+                  className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 overscroll-contain"
+                >
+                  {visibleCandidates.length === 0 ? (
+                    <div className="text-center py-10 text-gray-400 text-xs">
+                      {candidateFilterTab === "pending"
+                        ? "No pending schools found. All registered schools have already been added to quizzes!"
+                        : "No registered schools found."}
+                    </div>
+                  ) : (
+                    visibleCandidates.map(c => {
+                      const isChecked = selectedCandidateNames.has(c.schoolName);
+                      return (
+                        <label
+                          key={c.schoolName}
+                          className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                            isChecked
+                              ? "bg-maroon-50/40 border-maroon-200 shadow-xs"
+                              : "bg-white border-gray-200 hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSelectCandidate(c.schoolName)}
+                            className="mt-1 w-4 h-4 text-maroon-800 rounded border-gray-300 focus:ring-maroon-500 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <span className="text-sm font-bold text-gray-900 leading-tight">
+                                {c.schoolName}
+                              </span>
+                              {c.isAlreadyAdded ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                                  Already in Quizzes
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+                                  Pending to Add
+                                </span>
+                              )}
+                            </div>
+                            {c.submitterEmail && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                <span>{c.submitterEmail}</span>
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-gray-100 flex items-center justify-end gap-2 bg-gray-50/50">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowSyncModal(false)}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleImportSelected}
+                      disabled={selectedCandidateNames.size === 0 || isImporting}
+                      className="px-4 py-2 bg-maroon-800 hover:bg-maroon-900 text-white text-xs font-bold rounded-lg shadow-sm disabled:opacity-50 flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {isImporting ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Adding Schools...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add {selectedCandidateNames.size} Selected School{selectedCandidateNames.size === 1 ? "" : "s"}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

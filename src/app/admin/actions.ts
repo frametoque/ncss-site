@@ -131,10 +131,24 @@ export async function deleteMagazine(id: string) {
 
 // Competitions
 export async function createCompetition(data: Record<string, any>) {
-  await pool.query(
-    'INSERT INTO "competition" (id, slug, title, description, "isEnded", "isQuiz", date, time, location, deadline, content, "coverImage", "rulesPdf", "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())',
-    [data.slug, data.title, data.description, data.isEnded, data.isQuiz || false, data.date || null, data.time || null, data.location || null, data.deadline || null, data.content, data.coverImage || null, data.rulesPdf || null]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // Shift all existing competitions down by 1 so new one is at the top (orderIndex = 0)
+    await client.query('UPDATE "competition" SET "orderIndex" = COALESCE("orderIndex", 0) + 1');
+
+    await client.query(
+      'INSERT INTO "competition" (id, slug, title, description, "isEnded", "isQuiz", date, time, location, deadline, content, "coverImage", "rulesPdf", "orderIndex", "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0, now(), now())',
+      [data.slug, data.title, data.description, data.isEnded, data.isQuiz || false, data.date || null, data.time || null, data.location || null, data.deadline || null, data.content, data.coverImage || null, data.rulesPdf || null]
+    );
+
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
   revalidatePath("/admin/competitions");
   revalidatePath("/competitions");
   revalidatePath("/");

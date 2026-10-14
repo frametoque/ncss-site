@@ -18,7 +18,7 @@ import { StaggerContainer, StaggerItem } from "@/components/animations/StaggerGr
 export const revalidate = 60;
 
 export default async function Home() {
-  const compRes = await pool.query('SELECT * FROM "competition" ORDER BY "createdAt" DESC');
+  const compRes = await pool.query('SELECT * FROM "competition" ORDER BY "orderIndex" ASC NULLS LAST, "createdAt" DESC');
   const competitions = compRes.rows;
   
   const upcomingCompetitions = competitions.filter(comp => !isCompetitionEnded(comp)).slice(0, 3);

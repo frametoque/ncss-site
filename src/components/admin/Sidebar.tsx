@@ -9,21 +9,23 @@ import { logout } from "@/app/admin/login/actions";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // Load preference from local storage if desired
-    const saved = localStorage.getItem("ncss_admin_sidebar_collapsed");
-    if (saved) setIsCollapsed(saved === "true");
+    // Load preference from local storage if set
+    const saved = localStorage.getItem("ncss_admin_sidebar_collapsed_v2");
+    if (saved !== null) {
+      setIsCollapsed(saved === "true");
+    }
   }, []);
 
   const toggleCollapse = () => {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
-    localStorage.setItem("ncss_admin_sidebar_collapsed", String(newState));
+    localStorage.setItem("ncss_admin_sidebar_collapsed_v2", String(newState));
   };
 
   const navItems = [
@@ -36,7 +38,13 @@ export function Sidebar() {
     { name: "About Content", href: "/admin/about", icon: FileText },
   ];
 
-  if (!mounted) return <aside className="w-64 bg-maroon-900 text-white min-h-screen flex flex-col shadow-xl"></aside>;
+  if (!mounted) {
+    return (
+      <div className="w-20 flex-shrink-0 relative z-50 sticky top-0 h-screen">
+        <aside className="w-20 bg-maroon-900 text-white h-screen flex flex-col shadow-xl"></aside>
+      </div>
+    );
+  }
 
   const visuallyCollapsed = isCollapsed && !isHovered;
 

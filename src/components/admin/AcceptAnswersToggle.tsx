@@ -28,14 +28,17 @@ export function AcceptAnswersToggle({ competitionId, initialState }: { competiti
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-maroon-100 shadow-sm flex items-center justify-between">
+    <div className="bg-white p-6 rounded-xl border border-maroon-100 shadow-sm flex items-center justify-between w-full h-full">
       <div>
-        <h2 className="text-lg font-semibold text-maroon-900">Quiz Status</h2>
+        <h2 className="text-base font-bold text-maroon-900">Quiz Status</h2>
+        <p className="text-xs text-maroon-700/70 mt-0.5">
+          {isAccepting ? "Accepting answers" : "Closed for participants"}
+        </p>
       </div>
       <button 
         onClick={toggle} 
         disabled={isLoading}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-maroon-500 focus:ring-offset-2 ${
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-maroon-500 focus:ring-offset-2 shrink-0 ${
           isAccepting ? 'bg-green-500' : 'bg-gray-200'
         }`}
       >

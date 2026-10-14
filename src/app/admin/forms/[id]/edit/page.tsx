@@ -18,7 +18,7 @@ export default async function EditFormPage({ params }: { params: Promise<{ id: s
   const fieldsRes = await pool.query('SELECT * FROM "formField" WHERE "formId" = $1 ORDER BY "orderIndex" ASC', [id]);
   const fields = fieldsRes.rows;
 
-  const compRes = await pool.query('SELECT id, title FROM "competition" ORDER BY "createdAt" DESC');
+  const compRes = await pool.query('SELECT id, title FROM "competition" ORDER BY "orderIndex" ASC NULLS LAST, "createdAt" DESC');
   
   return (
     <div>

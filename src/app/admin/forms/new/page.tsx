@@ -5,7 +5,7 @@ import { SubmitButton } from "@/components/admin/SubmitButton";
 export const dynamic = "force-dynamic";
 
 export default async function NewForm() {
-  const compRes = await pool.query('SELECT id, title FROM "competition" ORDER BY "createdAt" DESC');
+  const compRes = await pool.query('SELECT id, title FROM "competition" ORDER BY "orderIndex" ASC NULLS LAST, "createdAt" DESC');
   const competitions = compRes.rows;
 
   return (

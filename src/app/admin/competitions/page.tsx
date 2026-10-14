@@ -5,7 +5,7 @@ import { deleteCompetition, updateCompetitionsOrder } from "../actions";
 import { SortableTable } from "@/components/admin/SortableTable";
 
 export default async function CompetitionsAdmin() {
-  const res = await pool.query('SELECT * FROM "competition" ORDER BY "orderIndex" ASC');
+  const res = await pool.query('SELECT * FROM "competition" ORDER BY "orderIndex" ASC NULLS LAST, "createdAt" DESC');
   
   const competitions = res.rows.map(comp => ({
     ...comp,

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function CompetitionsPage() {
-  const compRes = await pool.query('SELECT * FROM "competition" ORDER BY "createdAt" DESC');
+  const compRes = await pool.query('SELECT * FROM "competition" ORDER BY "orderIndex" ASC NULLS LAST, "createdAt" DESC');
   const competitions = compRes.rows;
 
   return (
