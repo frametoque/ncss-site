@@ -28,13 +28,20 @@ export default async function QuizAccessPage({ params, searchParams }: { params:
 
   async function checkAccess(formData: FormData) {
     "use server";
-    const accessCode = formData.get("accessCode") as string;
+    const accessCode = (formData.get("accessCode") as string)?.trim().toUpperCase();
     
+    if (!accessCode) {
+      redirect(`/competitions/${slug}/quiz/${categoryId}?error=InvalidAccessCode`);
+    }
+
     const accessRes = await pool.query(`
       SELECT sa.* 
       FROM school_access sa 
-      JOIN quiz_category qc ON sa."competitionId" = qc."competitionId"
-      WHERE qc.id = $1 AND sa."accessCode" = $2
+      WHERE (
+        sa."categoryId" = $1 
+        OR (sa."categoryId" IS NULL AND sa."competitionId" = (SELECT "competitionId" FROM quiz_category WHERE id = $1))
+      )
+      AND UPPER(TRIM(sa."accessCode")) = UPPER(TRIM($2))
     `, [categoryId, accessCode]);
     
     if (accessRes.rows.length === 0) {
@@ -64,17 +71,18 @@ export default async function QuizAccessPage({ params, searchParams }: { params:
       <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-md w-full">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold font-heading text-gray-900 mb-1">{competitionTitle}</h1>
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">{category.name} Quiz</h2>
-          <p className="text-gray-600">Enter your school's access code to begin.</p>
+          <h2 className="text-xl font-semibold text-maroon-700 mb-2">{category.name} Quiz</h2>
+          <p className="text-gray-600">Enter your school's access code for <strong>{category.name}</strong> to begin.</p>
         </div>
 
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 text-sm text-orange-900 space-y-2">
           <h3 className="font-bold flex items-center gap-2 text-orange-800">
-            Important Rules & Anti-Cheat
+            Important Rules & Guidelines
           </h3>
           <ul className="list-disc list-inside space-y-1 ml-1 text-orange-800/90 leading-relaxed">
-            <li>You <strong>cannot go backwards</strong>. Once you proceed, you cannot return to previous questions.</li>
-            <li>If a question timer runs out, you will automatically be moved to the next question.</li>
+            <li><strong>Automated progression:</strong> You cannot go to the next question manually. You must stay on each question until its timer ends.</li>
+            <li>When the timer expires, you will automatically be moved to the next question.</li>
+            <li>You <strong>cannot go backwards</strong> to previous questions.</li>
             <li><strong>Do not leave the tab.</strong> If you switch tabs, you have 10 seconds to return or the question will be skipped automatically.</li>
             <li>Copying text, right-clicking, and keyboard shortcuts are strictly disabled.</li>
           </ul>

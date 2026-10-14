@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import Link from "next/link";
 import Image from "next/image";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { isRedirectError } from "@/lib/is-redirect-error";
 import RichTextEditor from "./RichTextEditor";
 
 interface CompetitionFormProps {

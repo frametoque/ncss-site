@@ -8,8 +8,11 @@ export async function getQuizCategories(competitionId: string) {
   return res.rows;
 }
 
-export async function createQuizCategory(competitionId: string, name: string, totalTime: number | null) {
-  await pool.query('INSERT INTO quiz_category ("competitionId", name, "totalTime") VALUES ($1, $2, $3)', [competitionId, name, totalTime]);
+export async function createQuizCategory(competitionId: string, name: string, totalTime: number | null, questionTimer: number | null = 60) {
+  await pool.query(
+    'INSERT INTO quiz_category ("competitionId", name, "totalTime", "questionTimer") VALUES ($1, $2, $3, $4)', 
+    [competitionId, name, totalTime, questionTimer]
+  );
   revalidatePath(`/admin/competitions/${competitionId}/quizzes`);
 }
 
@@ -27,6 +30,7 @@ export async function updateQuizCategory(categoryId: string, name: string, total
 }
 
 export async function deleteQuizCategory(competitionId: string, categoryId: string) {
+  await pool.query('DELETE FROM school_access WHERE "categoryId" = $1', [categoryId]);
   await pool.query('DELETE FROM quiz_category WHERE id = $1', [categoryId]);
   revalidatePath(`/admin/competitions/${competitionId}/quizzes`);
 }
@@ -71,36 +75,89 @@ export async function saveQuizQuestions(categoryId: string, questions: any[]) {
 }
 
 export async function getSchoolAccesses(competitionId: string) {
-  const res = await pool.query('SELECT * FROM school_access WHERE "competitionId" = $1', [competitionId]);
+  const res = await pool.query('SELECT * FROM school_access WHERE "competitionId" = $1 ORDER BY "schoolName" ASC', [competitionId]);
   return res.rows;
 }
 
-export async function saveSchoolAccesses(competitionId: string, accesses: any[]) {
+export async function getSchoolAccessesByCategory(categoryId: string) {
+  const res = await pool.query('SELECT * FROM school_access WHERE "categoryId" = $1 ORDER BY "schoolName" ASC', [categoryId]);
+  return res.rows;
+}
+
+export async function saveSchoolAccesses(competitionId: string, accesses: any[], categoryId?: string | null) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    const aIds = accesses.map(a => a.id).filter(Boolean);
-    if (aIds.length > 0) {
-      await client.query(`DELETE FROM school_access WHERE "competitionId" = $1 AND id != ALL($2::text[])`, [competitionId, aIds]);
-    } else {
-      await client.query(`DELETE FROM school_access WHERE "competitionId" = $1`, [competitionId]);
-    }
-
-    for (const a of accesses) {
-      if (a.id) {
+    if (categoryId) {
+      // Scoped to a specific subject / category
+      const aIds = accesses.map(a => a.id).filter(Boolean);
+      if (aIds.length > 0) {
         await client.query(
-          'UPDATE school_access SET "schoolName" = $1, "accessCode" = $2 WHERE id = $3',
-          [a.schoolName, a.accessCode, a.id]
+          `DELETE FROM school_access WHERE "competitionId" = $1 AND "categoryId" = $2 AND id != ALL($3::text[])`,
+          [competitionId, categoryId, aIds]
         );
       } else {
         await client.query(
-          'INSERT INTO school_access (id, "competitionId", "schoolName", "accessCode") VALUES (gen_random_uuid()::text, $1, $2, $3)',
-          [competitionId, a.schoolName, a.accessCode]
+          `DELETE FROM school_access WHERE "competitionId" = $1 AND "categoryId" = $2`,
+          [competitionId, categoryId]
         );
       }
+
+      for (const a of accesses) {
+        const sName = a.schoolName?.trim();
+        const code = a.accessCode?.trim().toUpperCase();
+        if (!sName || !code) continue;
+
+        if (a.id) {
+          await client.query(
+            'UPDATE school_access SET "schoolName" = $1, "accessCode" = $2, "categoryId" = $3 WHERE id = $4',
+            [sName, code, categoryId, a.id]
+          );
+        } else {
+          await client.query(
+            'INSERT INTO school_access (id, "competitionId", "categoryId", "schoolName", "accessCode") VALUES (gen_random_uuid()::text, $1, $2, $3, $4)',
+            [competitionId, categoryId, sName, code]
+          );
+        }
+      }
+    } else {
+      // Saving across multiple / all categories
+      const aIds = accesses.map(a => a.id).filter(Boolean);
+      if (aIds.length > 0) {
+        await client.query(
+          `DELETE FROM school_access WHERE "competitionId" = $1 AND id != ALL($2::text[])`,
+          [competitionId, aIds]
+        );
+      } else {
+        await client.query(
+          `DELETE FROM school_access WHERE "competitionId" = $1`,
+          [competitionId]
+        );
+      }
+
+      for (const a of accesses) {
+        const sName = a.schoolName?.trim();
+        const code = a.accessCode?.trim().toUpperCase();
+        const catId = a.categoryId || null;
+        if (!sName || !code) continue;
+
+        if (a.id) {
+          await client.query(
+            'UPDATE school_access SET "schoolName" = $1, "accessCode" = $2, "categoryId" = $3 WHERE id = $4',
+            [sName, code, catId, a.id]
+          );
+        } else {
+          await client.query(
+            'INSERT INTO school_access (id, "competitionId", "categoryId", "schoolName", "accessCode") VALUES (gen_random_uuid()::text, $1, $2, $3, $4)',
+            [competitionId, catId, sName, code]
+          );
+        }
+      }
     }
+
     await client.query("COMMIT");
+    revalidatePath(`/admin/competitions/${competitionId}/quizzes`);
   } catch (e) {
     await client.query("ROLLBACK");
     throw e;

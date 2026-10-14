@@ -13,7 +13,12 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
 
   async function addAction(formData: FormData) {
     "use server";
-    await createQuizCategory(id, formData.get("name") as string, Number(formData.get("totalTime")) || null);
+    await createQuizCategory(
+      id, 
+      formData.get("name") as string, 
+      Number(formData.get("totalTime")) || null,
+      Number(formData.get("questionTimer")) || 60
+    );
   }
 
   async function deleteAction(formData: FormData) {
@@ -33,13 +38,17 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1 space-y-6">
           <div className="bg-white p-6 rounded-xl border border-maroon-100 shadow-sm">
-            <h2 className="text-lg font-semibold text-maroon-900 mb-4">Add New Category</h2>
+            <h2 className="text-lg font-semibold text-maroon-900 mb-4">Add New Subject / Category</h2>
             <form action={addAction} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-maroon-800 mb-1">Subject / Category Name</label>
-                <input type="text" name="name" required className="w-full px-3 py-2 border border-maroon-200 rounded-lg" placeholder="e.g. Mathematics" />
+                <input type="text" name="name" required className="w-full px-3 py-2 border border-maroon-200 rounded-lg" placeholder="e.g. Physics - Sinhala Medium" />
               </div>
-              <SubmitButton>Add Category</SubmitButton>
+              <div>
+                <label className="block text-sm font-medium text-maroon-800 mb-1">Per-Question Timer (seconds)</label>
+                <input type="number" name="questionTimer" defaultValue={60} min={5} required className="w-full px-3 py-2 border border-maroon-200 rounded-lg" placeholder="e.g. 60" />
+              </div>
+              <SubmitButton>Add Subject</SubmitButton>
             </form>
           </div>
         </div>
@@ -54,6 +63,9 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
               <div key={cat.id} className="bg-white p-6 rounded-xl border border-maroon-100 shadow-sm flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-maroon-900">{cat.name}</h3>
+                  <p className="text-xs text-maroon-600">
+                    Timer: {cat.questionTimer || 60} seconds per question
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Link href={`/admin/competitions/${id}/quizzes/${cat.id}`} className="px-3 py-1.5 bg-maroon-100 text-maroon-800 rounded-md text-sm font-medium hover:bg-maroon-200">
@@ -75,7 +87,7 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      <SchoolAccessManager competitionId={id} initialAccesses={accesses} />
+      <SchoolAccessManager competitionId={id} categories={categories} initialAccesses={accesses} />
     </div>
   );
 }

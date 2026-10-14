@@ -1,12 +1,14 @@
-import { getQuizCategory, getQuizQuestions, updateQuizCategory } from "../actions";
+import { getQuizCategory, getQuizQuestions, updateQuizCategory, getSchoolAccessesByCategory } from "../actions";
 import Link from "next/link";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { QuizManager } from "@/components/admin/QuizManager";
+import { SchoolAccessManager } from "@/components/admin/SchoolAccessManager";
 
 export default async function CategoryPage({ params }: { params: Promise<{ id: string, categoryId: string }> }) {
   const { id, categoryId } = await params;
   const category = await getQuizCategory(categoryId);
   const questions = await getQuizQuestions(categoryId);
+  const accesses = await getSchoolAccessesByCategory(categoryId);
 
   if (!category) {
     return <div>Category not found</div>;
@@ -18,7 +20,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
       categoryId, 
       formData.get("name") as string, 
       null,
-      Number(formData.get("questionTimer")) || null
+      Number(formData.get("questionTimer")) || 60
     );
   }
 
@@ -30,7 +32,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
       </div>
 
       <div className="bg-white p-6 rounded-xl border border-maroon-100 shadow-sm">
-        <h2 className="text-lg font-semibold text-maroon-900 mb-4">Category Settings</h2>
+        <h2 className="text-lg font-semibold text-maroon-900 mb-4">Subject Settings</h2>
         <form action={updateAction} className="flex gap-4 items-end flex-wrap">
           <div className="flex-1 min-w-[200px]">
             <label className="block text-sm font-medium text-maroon-800 mb-1">Subject / Category Name</label>
@@ -38,13 +40,20 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
           </div>
           <div className="flex-1 min-w-[150px]">
             <label className="block text-sm font-medium text-maroon-800 mb-1">Per-Question Timer (seconds)</label>
-            <input type="number" name="questionTimer" defaultValue={category.questionTimer || ""} className="w-full px-3 py-2 border border-maroon-200 rounded-lg" placeholder="Optional" />
+            <input type="number" name="questionTimer" defaultValue={category.questionTimer || 60} min={5} required className="w-full px-3 py-2 border border-maroon-200 rounded-lg" placeholder="e.g. 60" />
           </div>
           <SubmitButton>Update Settings</SubmitButton>
         </form>
       </div>
 
       <QuizManager category={category} initialQuestions={questions} />
+
+      <SchoolAccessManager 
+        competitionId={id} 
+        categories={[category]} 
+        initialAccesses={accesses} 
+        selectedCategoryId={categoryId} 
+      />
     </div>
   );
 }

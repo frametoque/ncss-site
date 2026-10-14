@@ -14,8 +14,11 @@ export default async function TakeQuizPage({ params }: { params: Promise<{ slug:
   const accessRes = await pool.query(`
     SELECT sa.* 
     FROM school_access sa 
-    JOIN quiz_category qc ON sa."competitionId" = qc."competitionId"
-    WHERE qc.id = $1 AND sa."accessCode" = $2
+    WHERE (
+      sa."categoryId" = $1 
+      OR (sa."categoryId" IS NULL AND sa."competitionId" = (SELECT "competitionId" FROM quiz_category WHERE id = $1))
+    )
+    AND UPPER(TRIM(sa."accessCode")) = UPPER(TRIM($2))
   `, [categoryId, accessCode]);
   
   if (accessRes.rows.length === 0) redirect(`/competitions/${slug}/quiz/${categoryId}?error=InvalidAccessCode`);

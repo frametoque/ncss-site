@@ -3,7 +3,7 @@
 import React, { useState, useRef } from "react";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import Link from "next/link";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { isRedirectError } from "@/lib/is-redirect-error";
 
 
 interface BoardFormProps {
