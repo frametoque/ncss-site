@@ -36,7 +36,15 @@ export async function deleteQuizCategory(competitionId: string, categoryId: stri
 }
 
 export async function getQuizQuestions(categoryId: string) {
-  const res = await pool.query('SELECT * FROM quiz_question WHERE "categoryId" = $1', [categoryId]);
+  // Ensure table has the latest columns
+  await pool.query(`
+    ALTER TABLE quiz_question 
+    ADD COLUMN IF NOT EXISTS code text, 
+    ADD COLUMN IF NOT EXISTS "codeLanguage" text,
+    ADD COLUMN IF NOT EXISTS "orderIndex" integer
+  `).catch(() => {});
+
+  const res = await pool.query('SELECT * FROM quiz_question WHERE "categoryId" = $1 ORDER BY "orderIndex" ASC NULLS LAST, id ASC', [categoryId]);
   return res.rows;
 }
 
@@ -44,6 +52,13 @@ export async function saveQuizQuestions(categoryId: string, questions: any[]) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    await client.query(`
+      ALTER TABLE quiz_question 
+      ADD COLUMN IF NOT EXISTS code text, 
+      ADD COLUMN IF NOT EXISTS "codeLanguage" text,
+      ADD COLUMN IF NOT EXISTS "orderIndex" integer
+    `).catch(() => {});
     
     const qIds = questions.map(q => q.id).filter(Boolean);
     if (qIds.length > 0) {
@@ -52,16 +67,19 @@ export async function saveQuizQuestions(categoryId: string, questions: any[]) {
       await client.query(`DELETE FROM quiz_question WHERE "categoryId" = $1`, [categoryId]);
     }
 
-    for (const q of questions) {
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      const codeVal = q.code && q.code.trim() ? q.code.trim() : null;
+      const codeLangVal = codeVal ? (q.codeLanguage || "plaintext") : null;
       if (q.id) {
         await client.query(
-          'UPDATE quiz_question SET "questionText" = $1, image = $2, options = $3, "correctOption" = $4 WHERE id = $5',
-          [q.questionText, q.image || null, JSON.stringify(q.options), q.correctOption, q.id]
+          'UPDATE quiz_question SET "questionText" = $1, image = $2, options = $3, "correctOption" = $4, code = $5, "codeLanguage" = $6, "orderIndex" = $7 WHERE id = $8',
+          [q.questionText, q.image || null, JSON.stringify(q.options), q.correctOption, codeVal, codeLangVal, i, q.id]
         );
       } else {
         await client.query(
-          'INSERT INTO quiz_question (id, "categoryId", "questionText", image, options, "correctOption") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5)',
-          [categoryId, q.questionText, q.image || null, JSON.stringify(q.options), q.correctOption]
+          'INSERT INTO quiz_question (id, "categoryId", "questionText", image, options, "correctOption", code, "codeLanguage", "orderIndex") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8)',
+          [categoryId, q.questionText, q.image || null, JSON.stringify(q.options), q.correctOption, codeVal, codeLangVal, i]
         );
       }
     }

@@ -2,7 +2,63 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Clock, Lock, Loader2 } from "lucide-react";
+import { CheckCircle, Clock, Lock, Loader2, Code2 } from "lucide-react";
+import { highlightCode } from "@/lib/prism";
+
+function CodeViewer({ code, language }: { code: string; language?: string }) {
+  const lines = code.split("\n");
+  const langLabel = (language || "python").toUpperCase();
+
+  const highlightedHtml = React.useMemo(() => {
+    return highlightCode(code, language);
+  }, [code, language]);
+
+  return (
+    <div 
+      className="w-full rounded-2xl overflow-hidden border border-[#333333] bg-[#1e1e1e] shadow-xl flex flex-col h-full min-h-[220px] select-none"
+      onCopy={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()}
+      style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+    >
+      <div className="bg-[#252526] px-4 py-2.5 border-b border-[#333333] flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 mr-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56] inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e] inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f] inline-block" />
+          </div>
+          <span className="text-[11px] font-mono font-bold tracking-wider text-[#9cdcfe] bg-[#1e1e1e] border border-[#3c3c3c] px-2 py-0.5 rounded">
+            {langLabel}
+          </span>
+          <span className="text-xs text-[#858585] font-mono hidden sm:inline">code_attachment</span>
+        </div>
+        <span className="text-[11px] font-mono text-[#858585]">
+          Protected
+        </span>
+      </div>
+      <div 
+        className="p-4 overflow-auto font-mono text-xs sm:text-sm leading-relaxed flex flex-1 select-none pointer-events-auto bg-[#1e1e1e]"
+        onCopy={(e) => e.preventDefault()}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <div className="select-none text-[#858585] text-right pr-4 border-r border-[#333333] shrink-0 font-mono text-xs sm:text-sm leading-relaxed">
+          {lines.map((_, i) => (
+            <div key={i}>{i + 1}</div>
+          ))}
+        </div>
+        <pre 
+          className="vscode-theme pl-4 whitespace-pre overflow-x-auto flex-1 font-mono text-xs sm:text-sm leading-relaxed select-none"
+          style={{ userSelect: 'none', WebkitUserSelect: 'none', backgroundColor: '#1e1e1e', margin: 0, padding: 0 }}
+        >
+          <code 
+            className="vscode-theme"
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }} 
+          />
+        </pre>
+      </div>
+    </div>
+  );
+}
 
 export function QuizTaker({ 
   category, 
@@ -314,28 +370,31 @@ export function QuizTaker({
       )}
       
       <div 
-        className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col flex-1 h-full min-h-0 select-none"
+        className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col flex-1 h-full min-h-0 select-none"
         onContextMenu={(e) => e.preventDefault()}
         onCopy={(e) => e.preventDefault()}
       >
         {/* Top Header */}
-        <div className="bg-maroon-900 text-white p-6 flex justify-between items-center shrink-0">
+        <div className="bg-maroon-900 text-white px-4 py-2.5 sm:px-6 sm:py-3 flex justify-between items-center shrink-0">
           <div>
-            <h1 className="text-sm font-medium text-maroon-300 uppercase tracking-wider mb-1">{competitionTitle}</h1>
-            <h2 className="text-xl font-bold">{category.name}</h2>
-            <div className="flex items-center gap-1.5 mt-3 flex-wrap max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium text-maroon-300 uppercase tracking-wider">{competitionTitle}</span>
+              <span className="text-maroon-500">•</span>
+              <span className="text-xs sm:text-sm font-bold text-white">{category.name}</span>
+            </div>
+            <div className="flex items-center gap-1 mt-1.5 flex-wrap max-w-2xl">
               {questions.map((q, i) => {
                 const isCurrent = i === currentIndex;
                 const isAnswered = answers[q.id] !== undefined;
                 
-                let circleClass = "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all duration-200 ";
+                let circleClass = "w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border transition-all duration-200 ";
                 
                 if (isCurrent) {
-                  circleClass += " border-white bg-transparent text-white ring-2 ring-white/30 ring-offset-1 ring-offset-maroon-900 shadow-sm transform scale-110";
+                  circleClass += " border-white bg-transparent text-white ring-2 ring-white/30 shadow-sm transform scale-110";
                 } else if (isAnswered) {
                   circleClass += " border-white bg-white text-maroon-900 shadow-sm";
                 } else {
-                  circleClass += " border-maroon-700 bg-maroon-900/50 text-maroon-500";
+                  circleClass += " border-maroon-700 bg-maroon-900/50 text-maroon-400";
                 }
 
                 return (
@@ -346,121 +405,144 @@ export function QuizTaker({
               })}
             </div>
           </div>
-          <div className="text-right flex flex-col items-end gap-2">
-            <div>
-              <p className="text-xs text-maroon-200 uppercase tracking-wider mb-0.5">Your School</p>
-              <p className="text-sm font-semibold text-white">{schoolName}</p>
-            </div>
+          <div className="text-right shrink-0">
+            <p className="text-[10px] text-maroon-200 uppercase tracking-wider">Your School</p>
+            <p className="text-xs sm:text-sm font-semibold text-white truncate max-w-[140px] sm:max-w-xs">{schoolName}</p>
           </div>
         </div>
 
         {/* Question Area */}
-        <div className="p-6 md:p-8 flex-1 flex flex-col min-h-0">
-          {/* Question Text & Time Badge */}
-          <div className="mb-4 flex justify-between items-start gap-4 shrink-0">
-            <div className="flex-1">
-              <div className="text-xs uppercase tracking-wider text-maroon-700 font-bold mb-1">
-                Question {currentIndex + 1} of {questions.length}
+        <div className="p-3.5 sm:p-5 md:p-6 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
+          {/* Top section: Question Text & Timer */}
+          <div className="shrink-0 mb-2 sm:mb-3">
+            <div className="flex justify-between items-start gap-3 mb-2">
+              <div className="flex-1">
+                <div className="text-[11px] uppercase tracking-wider text-maroon-700 font-bold mb-0.5">
+                  Question {currentIndex + 1} of {questions.length}
+                </div>
+                <h3 className="text-base sm:text-lg md:text-xl text-gray-900 font-medium leading-snug line-clamp-3">
+                  {currentQ.questionText}
+                </h3>
               </div>
-              <h3 className="text-2xl text-gray-900 font-medium leading-relaxed">
-                {currentQ.questionText}
-              </h3>
-            </div>
-            <div className={`px-4 py-2 rounded-xl text-center shrink-0 border shadow-sm transition-colors ${
-              questionTimeLeft <= 5 
-                ? 'bg-red-100 text-red-800 border-red-300 animate-pulse' 
-                : questionTimeLeft <= 10 
-                  ? 'bg-amber-50 text-amber-800 border-amber-200' 
-                  : 'bg-maroon-50 text-maroon-800 border-maroon-200'
-            }`}>
-              <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5">Time Left</p>
-              <p className="text-2xl font-mono font-bold leading-none">{questionTimeLeft}s</p>
-            </div>
-          </div>
-
-          {/* Animated Time Progress Bar */}
-          <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-6 shrink-0">
-            <div 
-              className={`h-full transition-all duration-1000 ease-linear rounded-full ${
+              <div className={`px-3 py-1.5 rounded-xl text-center shrink-0 border shadow-sm transition-colors ${
                 questionTimeLeft <= 5 
-                  ? 'bg-red-500' 
+                  ? 'bg-red-100 text-red-800 border-red-300 animate-pulse' 
                   : questionTimeLeft <= 10 
-                    ? 'bg-amber-500' 
-                    : 'bg-maroon-600'
-              }`}
-              style={{ width: `${timeProgressPercent}%` }}
-            />
-          </div>
-
-          {/* Options & Optional Image */}
-          <div className={`gap-8 flex-1 min-h-0 mb-6 ${currentQ.image ? 'grid grid-cols-1 md:grid-cols-2 items-stretch' : 'flex flex-col justify-center'}`}>
-            {currentQ.image && (
-              <div className="relative w-full h-full rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-gray-50 p-2 min-h-[300px]">
-                <img src={currentQ.image} alt="Question figure" className="w-full h-full object-contain" />
+                    ? 'bg-amber-50 text-amber-800 border-amber-200' 
+                    : 'bg-maroon-50 text-maroon-800 border-maroon-200'
+              }`}>
+                <p className="text-[9px] font-bold uppercase tracking-wider mb-0.5">Time Left</p>
+                <p className="text-xl sm:text-2xl font-mono font-bold leading-none">{questionTimeLeft}s</p>
               </div>
-            )}
-            
-            <div className="space-y-4 flex flex-col justify-center overflow-y-auto px-1">
-              {currentQ.options.map((opt: string, i: number) => {
-                const isSelected = answers[currentQ.id] === i.toString();
-                return (
-                  <button
-                    key={i}
-                    onClick={() => selectOption(currentQ.id, i.toString())}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 shrink-0 ${
-                      isSelected 
-                        ? 'border-maroon-600 bg-maroon-50 text-maroon-900 shadow-sm' 
-                        : 'border-gray-200 hover:border-maroon-300 hover:bg-gray-50 text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 font-bold text-sm shrink-0 ${
-                        isSelected ? 'bg-maroon-600 text-white' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        {String.fromCharCode(65 + i)}
-                      </span>
-                      <span className="text-lg">{opt}</span>
-                    </div>
-                  </button>
-                );
-              })}
+            </div>
+
+            {/* Animated Time Progress Bar */}
+            <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-1000 ease-linear rounded-full ${
+                  questionTimeLeft <= 5 
+                    ? 'bg-red-500' 
+                    : questionTimeLeft <= 10 
+                      ? 'bg-amber-500' 
+                      : 'bg-maroon-600'
+                }`}
+                style={{ width: `${timeProgressPercent}%` }}
+              />
             </div>
           </div>
+
+          {/* Middle section: Options & Optional Attachments (Image and/or Code) */}
+          {(() => {
+            const rawOpts = typeof currentQ.options === 'string' ? JSON.parse(currentQ.options) : currentQ.options;
+            const currentOptions: string[] = Array.isArray(rawOpts) ? rawOpts : [];
+            const hasImage = !!currentQ.image;
+            const hasCode = !!(currentQ.code && currentQ.code.trim());
+            const hasAttachments = hasImage || hasCode;
+
+            return (
+              <div className={`gap-4 flex-1 min-h-0 my-auto flex flex-col justify-center w-full ${hasAttachments ? 'lg:grid lg:grid-cols-2 items-stretch' : 'max-w-4xl mx-auto'}`}>
+                {hasAttachments && (
+                  <div className="flex flex-col gap-3 overflow-y-auto max-h-[35vh] lg:max-h-none pr-1">
+                    {hasImage && (
+                      <div className="relative w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-gray-50 p-2 min-h-[140px] flex items-center justify-center shrink-0">
+                        <img src={currentQ.image} alt="Question figure" className="w-full h-full max-h-[220px] object-contain" />
+                      </div>
+                    )}
+                    {hasCode && (
+                      <div className="flex-1 min-h-[160px]">
+                        <CodeViewer code={currentQ.code} language={currentQ.codeLanguage} />
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                <div className="space-y-2 sm:space-y-2.5 w-full my-auto">
+                  {currentOptions.map((opt: string, i: number) => {
+                    if (opt === undefined || opt === null || (typeof opt === 'string' && opt.trim() === '')) {
+                      return null;
+                    }
+                    const isSelected = answers[currentQ.id] === i.toString();
+                    const letter = String.fromCharCode(65 + i);
+
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => selectOption(currentQ.id, i.toString())}
+                        className={`w-full text-left py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-2 transition-all duration-150 flex items-center shrink-0 ${
+                          isSelected 
+                            ? 'border-maroon-600 bg-maroon-50 text-maroon-900 shadow-sm ring-1 ring-maroon-600/30' 
+                            : 'border-gray-200 hover:border-maroon-300 hover:bg-gray-50 text-gray-800'
+                        }`}
+                      >
+                        <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center mr-3 font-bold text-xs sm:text-sm shrink-0 transition-colors ${
+                          isSelected ? 'bg-maroon-600 text-white' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {letter}
+                        </span>
+                        <span className="text-sm sm:text-base leading-snug break-words flex-1">{opt}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Bottom Bar: Automated Progression (No manual Next button) */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-100 shrink-0">
+          <div className="flex flex-row justify-between items-center gap-3 pt-2.5 sm:pt-3 border-t border-gray-100 shrink-0">
             {/* Status of answer selection */}
-            <div className="flex items-center gap-2 text-sm w-full sm:w-auto">
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
               {answers[currentQ.id] !== undefined ? (
-                <div className="flex items-center gap-2 text-green-700 bg-green-50 px-3.5 py-2 rounded-xl border border-green-200 font-medium w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200 font-medium">
                   <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
                   <span>
-                    Option <strong>{String.fromCharCode(65 + parseInt(answers[currentQ.id]))}</strong> selected. You can change your choice until time expires.
+                    Option <strong>{String.fromCharCode(65 + parseInt(answers[currentQ.id]))}</strong> selected.
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-amber-800 bg-amber-50 px-3.5 py-2 rounded-xl border border-amber-200 font-medium w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 text-amber-800 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 font-medium">
                   <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>Please select an option before time expires.</span>
                 </div>
               )}
             </div>
 
-            {/* Auto-advance Locked Status Badge (Participants cannot skip manually) */}
-            <div className="flex items-center gap-3 shrink-0">
+            {/* Auto-advance Locked Status Badge */}
+            <div className="flex items-center gap-2 shrink-0">
               {isSubmitting ? (
-                <div className="flex items-center gap-2 px-6 py-3 bg-maroon-50 text-maroon-800 rounded-xl font-bold text-sm border border-maroon-200 shadow-sm animate-pulse">
-                  <Loader2 className="w-4 h-4 animate-spin text-maroon-700" />
-                  Submitting your quiz...
+                <div className="flex items-center gap-2 px-4 py-1.5 bg-maroon-50 text-maroon-800 rounded-lg font-bold text-xs sm:text-sm border border-maroon-200 shadow-sm animate-pulse">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-maroon-700" />
+                  Submitting...
                 </div>
               ) : (
-                <div className="flex items-center gap-2.5 px-5 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-700 font-semibold text-sm shadow-inner">
-                  <Lock className="w-4 h-4 text-maroon-700 shrink-0" />
+                <div className="flex items-center gap-2 px-3.5 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-gray-700 font-medium text-xs sm:text-sm shadow-inner">
+                  <Lock className="w-3.5 h-3.5 text-maroon-700 shrink-0" />
                   <span>
                     {currentIndex < questions.length - 1 ? (
-                      <>Next question in <strong className="font-mono text-maroon-800 text-base">{questionTimeLeft}s</strong></>
+                      <>Next in <strong className="font-mono text-maroon-800">{questionTimeLeft}s</strong></>
                     ) : (
-                      <>Quiz auto-submits in <strong className="font-mono text-maroon-800 text-base">{questionTimeLeft}s</strong></>
+                      <>Submits in <strong className="font-mono text-maroon-800">{questionTimeLeft}s</strong></>
                     )}
                   </span>
                 </div>

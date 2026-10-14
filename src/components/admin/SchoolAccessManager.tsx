@@ -17,7 +17,6 @@ import {
   RotateCw, 
   Check, 
   AlertCircle, 
-  Sparkles,
   Download,
   X
 } from "lucide-react";
@@ -464,8 +463,7 @@ export function SchoolAccessManager({
       {/* Modal: Add school to all subjects */}
       {showAddToAllModal && (
         <div className="p-4 bg-maroon-50/70 border border-maroon-200 rounded-xl space-y-3">
-          <h4 className="text-sm font-bold text-maroon-900 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-maroon-600" />
+          <h4 className="text-sm font-bold text-maroon-900">
             Add School to All Subjects Simultaneously
           </h4>
           <p className="text-xs text-maroon-700/80">

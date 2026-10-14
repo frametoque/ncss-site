@@ -57,7 +57,7 @@ export default async function TakeQuizPage({
   const [subRes, categoryRes, questionsRes, compRes] = await Promise.all([
     pool.query('SELECT id FROM quiz_submission WHERE "categoryId" = $1 AND "schoolAccessId" = $2', [categoryId, schoolAccess.id]),
     pool.query('SELECT * FROM quiz_category WHERE id = $1', [categoryId]),
-    pool.query('SELECT id, "questionText", image, options FROM quiz_question WHERE "categoryId" = $1', [categoryId]),
+    pool.query('SELECT id, "questionText", image, options, code, "codeLanguage" FROM quiz_question WHERE "categoryId" = $1 ORDER BY "orderIndex" ASC NULLS LAST, id ASC', [categoryId]),
     pool.query('SELECT title, "acceptingQuizAnswers" FROM competition WHERE slug = $1', [slug])
   ]);
 
@@ -72,7 +72,7 @@ export default async function TakeQuizPage({
   }
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-4 py-6 flex flex-col min-h-[calc(100vh-100px)] md:h-[calc(100vh-100px)]">
+    <div className="w-full max-w-[1600px] mx-auto p-2 sm:p-3 md:p-4 flex flex-col flex-1 min-h-[calc(100vh-80px)] md:h-[calc(100vh-80px)]">
       <QuizTaker 
         category={category} 
         competitionTitle={competitionTitle}

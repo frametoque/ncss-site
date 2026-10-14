@@ -57,3 +57,92 @@ img {
   -moz-user-select: none;
   -ms-user-select: none;
 }
+
+/* VS Code Dark+ Syntax Highlighting Theme */
+.vscode-theme {
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace !important;
+}
+
+.vscode-theme .token.comment,
+.vscode-theme .token.prolog,
+.vscode-theme .token.doctype,
+.vscode-theme .token.cdata {
+  color: #6a9955 !important;
+  font-style: italic !important;
+}
+
+.vscode-theme .token.punctuation,
+.vscode-theme .token.tag .token.punctuation {
+  color: #808080 !important;
+}
+
+.vscode-theme .token.tag,
+.vscode-theme .token.tag > .token.tag {
+  color: #569cd6 !important;
+}
+
+.vscode-theme .token.attr-name,
+.vscode-theme .token.tag .token.attr-name {
+  color: #9cdcfe !important;
+}
+
+.vscode-theme .token.attr-value,
+.vscode-theme .token.tag .token.attr-value,
+.vscode-theme .token.string,
+.vscode-theme .token.char {
+  color: #ce9178 !important;
+}
+
+.vscode-theme .token.attr-value .token.punctuation,
+.vscode-theme .token.attr-value .token.attr-equals {
+  color: #d4d4d4 !important;
+}
+
+.vscode-theme .token.keyword {
+  color: #c586c0 !important;
+}
+
+.vscode-theme .token.operator {
+  color: #d4d4d4 !important;
+}
+
+.vscode-theme .token.number {
+  color: #b5cea8 !important;
+}
+
+.vscode-theme .token.boolean {
+  color: #569cd6 !important;
+}
+
+.vscode-theme .token.function {
+  color: #dcdcaa !important;
+}
+
+.vscode-theme .token.class-name,
+.vscode-theme .token.builtin {
+  color: #4ec9b0 !important;
+}
+
+.vscode-theme .token.variable {
+  color: #9cdcfe !important;
+}
+
+.vscode-theme .token.property {
+  color: #9cdcfe !important;
+}
+
+.vscode-theme .token.selector {
+  color: #d7ba7d !important;
+}
+
+.vscode-theme .token.regex {
+  color: #d16969 !important;
+}
+
+.vscode-theme .token.delimiter,
+.vscode-theme .token.important {
+  color: #569cd6 !important;
+}
+
