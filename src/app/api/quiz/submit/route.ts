@@ -2,6 +2,24 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { cookies } from "next/headers";
 
+// In-memory cache for questions during submission rush (60s TTL)
+interface CachedQuestions {
+  data: Array<{ id: string; correctOption: string }>;
+  expires: number;
+}
+const questionCache = new Map<string, CachedQuestions>();
+
+async function getCachedQuestions(categoryId: string) {
+  const now = Date.now();
+  const cached = questionCache.get(categoryId);
+  if (cached && cached.expires > now) {
+    return cached.data;
+  }
+  const questionsRes = await pool.query('SELECT id, "correctOption" FROM quiz_question WHERE "categoryId" = $1', [categoryId]);
+  questionCache.set(categoryId, { data: questionsRes.rows, expires: now + 60_000 });
+  return questionsRes.rows;
+}
+
 export async function POST(req: Request) {
   try {
     const { categoryId, schoolAccessId, answers, totalTimeLeft } = await req.json();
@@ -10,28 +28,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const checkRes = await pool.query(`
-      SELECT qs.id 
-      FROM quiz_submission qs 
-      WHERE qs."categoryId" = $1 AND qs."schoolAccessId" = $2
-    `, [categoryId, schoolAccessId]);
+    const [checkRes, catRes, questions] = await Promise.all([
+      pool.query(`
+        SELECT qs.id 
+        FROM quiz_submission qs 
+        WHERE qs."categoryId" = $1 AND qs."schoolAccessId" = $2
+      `, [categoryId, schoolAccessId]),
+      pool.query(`
+        SELECT c."acceptingQuizAnswers" 
+        FROM quiz_category qc
+        JOIN competition c ON qc."competitionId" = c.id
+        WHERE qc.id = $1
+      `, [categoryId]),
+      getCachedQuestions(categoryId)
+    ]);
+
     if (checkRes.rows.length > 0) {
       return NextResponse.json({ error: "Already submitted" }, { status: 400 });
     }
 
-    const catRes = await pool.query(`
-      SELECT c."acceptingQuizAnswers" 
-      FROM quiz_category qc
-      JOIN competition c ON qc."competitionId" = c.id
-      WHERE qc.id = $1
-    `, [categoryId]);
-
     if (!catRes.rows[0]?.acceptingQuizAnswers) {
       return NextResponse.json({ error: "Quiz is closed" }, { status: 400 });
     }
-
-    const questionsRes = await pool.query('SELECT id, "correctOption" FROM quiz_question WHERE "categoryId" = $1', [categoryId]);
-    const questions = questionsRes.rows;
 
     let score = 0;
     for (const q of questions) {

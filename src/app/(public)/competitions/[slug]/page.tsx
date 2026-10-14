@@ -9,6 +9,8 @@ import { Metadata } from "next";
 
 type Params = Promise<{ slug: string }>;
 
+export const revalidate = 60;
+
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   const res = await pool.query('SELECT title, description, "coverImage" FROM "competition" WHERE slug = $1', [slug]);
@@ -179,10 +181,11 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
   const compItem = compRes.rows[0];
   const ended = isCompetitionEnded(compItem);
 
-  const formsRes = await pool.query('SELECT * FROM "form" WHERE "competitionId" = $1 AND "isActive" = true ORDER BY "createdAt" ASC', [compItem.id]);
+  const [formsRes, quizRes] = await Promise.all([
+    pool.query('SELECT * FROM "form" WHERE "competitionId" = $1 AND "isActive" = true ORDER BY "createdAt" ASC', [compItem.id]),
+    pool.query('SELECT * FROM quiz_category WHERE "competitionId" = $1 ORDER BY name ASC', [compItem.id])
+  ]);
   const linkedForms = formsRes.rows;
-
-  const quizRes = await pool.query('SELECT * FROM quiz_category WHERE "competitionId" = $1 ORDER BY name ASC', [compItem.id]);
   const quizzes = quizRes.rows;
 
   return (

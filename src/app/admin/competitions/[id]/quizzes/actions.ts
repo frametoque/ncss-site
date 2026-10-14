@@ -166,6 +166,40 @@ export async function saveSchoolAccesses(competitionId: string, accesses: any[],
   }
 }
 
+export async function deleteSchoolFromAllCategories(competitionId: string, schoolName: string) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Fetch school_access IDs for this school in this competition
+    const saRes = await client.query(
+      'SELECT id FROM school_access WHERE "competitionId" = $1 AND LOWER(TRIM("schoolName")) = LOWER(TRIM($2))',
+      [competitionId, schoolName]
+    );
+    const saIds = saRes.rows.map(r => r.id);
+
+    if (saIds.length > 0) {
+      await client.query(
+        'DELETE FROM quiz_submission WHERE "schoolAccessId" = ANY($1::text[])',
+        [saIds]
+      );
+      await client.query(
+        'DELETE FROM school_access WHERE id = ANY($1::text[])',
+        [saIds]
+      );
+    }
+
+    await client.query("COMMIT");
+    revalidatePath(`/admin/competitions/${competitionId}/quizzes`);
+    return { success: true };
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getQuizSubmissions(categoryId: string) {
   const res = await pool.query(`
     SELECT qs.*, sa."schoolName" 

@@ -6,6 +6,7 @@ import {
   importSchoolsFromForm, 
   getFormSchoolCandidates, 
   importSelectedSchools, 
+  deleteSchoolFromAllCategories,
   RegisteredSchoolCandidate 
 } from "@/app/admin/competitions/[id]/quizzes/actions";
 import { useRouter } from "next/navigation";
@@ -60,8 +61,19 @@ export function SchoolAccessManager({
     }));
   });
 
+  useEffect(() => {
+    setAccesses(
+      initialAccesses.map(a => ({
+        ...a,
+        categoryId: a.categoryId || (categories.length === 1 ? categories[0].id : null)
+      }))
+    );
+  }, [initialAccesses, categories]);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isAddingToAll, setIsAddingToAll] = useState(false);
+  const [deletingSchoolName, setDeletingSchoolName] = useState<string | null>(null);
   const [copiedSubject, setCopiedSubject] = useState(false);
   const [newSchoolNameModal, setNewSchoolNameModal] = useState("");
   const [showAddToAllModal, setShowAddToAllModal] = useState(false);
@@ -139,22 +151,23 @@ export function SchoolAccessManager({
     ]);
   };
 
-  // Add school to ALL subjects with distinct unique codes
-  const handleAddSchoolToAllSubjects = () => {
+  // Add school to ALL subjects with distinct unique codes and persist directly to DB
+  const handleAddSchoolToAllSubjects = async () => {
     const trimmed = newSchoolNameModal.trim();
-    if (!trimmed) return;
+    if (!trimmed || isAddingToAll) return;
 
-    const existingCodes = new Set(allCodesSet);
-    const newRecords: SchoolAccess[] = categories.map(cat => ({
-      competitionId,
-      categoryId: cat.id,
-      schoolName: trimmed,
-      accessCode: generateUniqueCode(existingCodes)
-    }));
-
-    setAccesses(prev => [...prev, ...newRecords]);
-    setNewSchoolNameModal("");
-    setShowAddToAllModal(false);
+    setIsAddingToAll(true);
+    try {
+      const res = await importSelectedSchools(competitionId, [trimmed]);
+      alert(`Successfully added "${trimmed}" to all subjects!`);
+      setNewSchoolNameModal("");
+      setShowAddToAllModal(false);
+      router.refresh();
+    } catch (err: any) {
+      alert(`Failed to add school: ${err.message || "Unknown error"}`);
+    } finally {
+      setIsAddingToAll(false);
+    }
   };
 
   // Copy schools from another subject to current subject
@@ -221,6 +234,23 @@ export function SchoolAccessManager({
 
   const removeAccess = (targetIndex: number) => {
     setAccesses(prev => prev.filter((_, i) => i !== targetIndex));
+  };
+
+  const handleDeleteSchoolFromAll = async (schoolName: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${schoolName}" and all its access codes across all subjects?`)) {
+      return;
+    }
+
+    setDeletingSchoolName(schoolName);
+    try {
+      await deleteSchoolFromAllCategories(competitionId, schoolName);
+      setAccesses(prev => prev.filter(a => a.schoolName?.trim().toLowerCase() !== schoolName.trim().toLowerCase()));
+      router.refresh();
+    } catch (err: any) {
+      alert(`Failed to delete school: ${err.message || "Unknown error"}`);
+    } finally {
+      setDeletingSchoolName(null);
+    }
   };
 
   // Open Sync Modal and load candidates from registration form
@@ -459,10 +489,17 @@ export function SchoolAccessManager({
             <button
               type="button"
               onClick={handleAddSchoolToAllSubjects}
-              disabled={!newSchoolNameModal.trim()}
-              className="px-4 py-2 bg-maroon-800 text-white rounded-lg text-xs font-bold hover:bg-maroon-900 disabled:opacity-50"
+              disabled={!newSchoolNameModal.trim() || isAddingToAll}
+              className="px-4 py-2 bg-maroon-800 text-white rounded-lg text-xs font-bold hover:bg-maroon-900 disabled:opacity-50 flex items-center gap-1.5"
             >
-              Add to All Subjects
+              {isAddingToAll ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Adding...</span>
+                </>
+              ) : (
+                <span>Add to All Subjects</span>
+              )}
             </button>
             <button
               type="button"
@@ -848,12 +885,13 @@ export function SchoolAccessManager({
                       {cat.name}
                     </th>
                   ))}
+                  <th className="p-3 text-right w-20">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {allUniqueSchools.length === 0 ? (
                   <tr>
-                    <td colSpan={categories.length + 1} className="p-8 text-center text-gray-400">
+                    <td colSpan={categories.length + 2} className="p-8 text-center text-gray-400">
                       No schools configured yet. Add schools via any subject tab above.
                     </td>
                   </tr>
@@ -879,6 +917,21 @@ export function SchoolAccessManager({
                           </td>
                         );
                       })}
+                      <td className="p-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSchoolFromAll(schoolName)}
+                          disabled={deletingSchoolName === schoolName}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center justify-center"
+                          title={`Delete ${schoolName} from all subjects`}
+                        >
+                          {deletingSchoolName === schoolName ? (
+                            <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}

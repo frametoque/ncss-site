@@ -7,11 +7,12 @@ export default async function QuizAccessPage({ params, searchParams }: { params:
   const { slug, categoryId } = await params;
   const { error } = await searchParams;
 
-  const res = await pool.query('SELECT * FROM quiz_category WHERE id = $1', [categoryId]);
+  const [res, compRes] = await Promise.all([
+    pool.query('SELECT * FROM quiz_category WHERE id = $1', [categoryId]),
+    pool.query('SELECT title, "acceptingQuizAnswers" FROM competition WHERE slug = $1', [slug])
+  ]);
   if (res.rows.length === 0) notFound();
   const category = res.rows[0];
-
-  const compRes = await pool.query('SELECT title, "acceptingQuizAnswers" FROM competition WHERE slug = $1', [slug]);
   const competition = compRes.rows[0];
   const competitionTitle = competition?.title || 'Competition';
 
@@ -28,42 +29,70 @@ export default async function QuizAccessPage({ params, searchParams }: { params:
 
   async function checkAccess(formData: FormData) {
     "use server";
-    const accessCode = (formData.get("accessCode") as string)?.trim().toUpperCase();
+    const rawCode = (formData.get("accessCode") as string) || "";
+    const accessCode = rawCode.trim().toUpperCase().replace(/[\s-]+/g, "");
     
     if (!accessCode) {
       redirect(`/competitions/${slug}/quiz/${categoryId}?error=InvalidAccessCode`);
     }
 
-    const accessRes = await pool.query(`
+    // 1. Try matching the current category
+    let accessRes = await pool.query(`
       SELECT sa.* 
       FROM school_access sa 
       WHERE (
         sa."categoryId" = $1 
         OR (sa."categoryId" IS NULL AND sa."competitionId" = (SELECT "competitionId" FROM quiz_category WHERE id = $1))
       )
-      AND UPPER(TRIM(sa."accessCode")) = UPPER(TRIM($2))
+      AND UPPER(REPLACE(sa."accessCode", ' ', '')) = $2
     `, [categoryId, accessCode]);
     
-    if (accessRes.rows.length === 0) {
+    let schoolAccess = accessRes.rows[0];
+    let targetCategoryId = categoryId;
+    let targetSlug = slug;
+
+    // 2. If not found in current category, search across all categories in this or other competitions
+    if (!schoolAccess) {
+      const crossRes = await pool.query(`
+        SELECT sa.*, c.slug as "compSlug", qc.name as "categoryName"
+        FROM school_access sa
+        LEFT JOIN quiz_category qc ON sa."categoryId" = qc.id
+        LEFT JOIN competition c ON (qc."competitionId" = c.id OR sa."competitionId" = c.id)
+        WHERE UPPER(REPLACE(sa."accessCode", ' ', '')) = $1
+        LIMIT 1
+      `, [accessCode]);
+
+      if (crossRes.rows.length > 0) {
+        schoolAccess = crossRes.rows[0];
+        targetCategoryId = schoolAccess.categoryId || categoryId;
+        targetSlug = schoolAccess.compSlug || slug;
+      }
+    }
+
+    if (!schoolAccess) {
       redirect(`/competitions/${slug}/quiz/${categoryId}?error=InvalidAccessCode`);
     }
 
-    const schoolAccess = accessRes.rows[0];
-
-    const subRes = await pool.query('SELECT id FROM quiz_submission WHERE "categoryId" = $1 AND "schoolAccessId" = $2', [categoryId, schoolAccess.id]);
+    // 3. Check if answers were already submitted
+    const subRes = await pool.query(
+      'SELECT id FROM quiz_submission WHERE "categoryId" = $1 AND "schoolAccessId" = $2',
+      [targetCategoryId, schoolAccess.id]
+    );
     if (subRes.rows.length > 0) {
-      redirect(`/competitions/${slug}/quiz/${categoryId}?error=AlreadySubmitted`);
+      redirect(`/competitions/${targetSlug}/quiz/${targetCategoryId}?error=AlreadySubmitted`);
     }
 
+    // 4. Set access cookie with lax SameSite for browser compatibility
     const cookieStore = await cookies();
-    cookieStore.set(`quiz_access_${categoryId}`, accessCode, {
+    cookieStore.set(`quiz_access_${targetCategoryId}`, accessCode, {
       path: "/",
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: "lax",
       maxAge: 60 * 60 * 2 // 2 hours
     });
 
-    redirect(`/competitions/${slug}/quiz/${categoryId}/take`);
+    // 5. Redirect to quiz taker, passing code as query parameter backup
+    redirect(`/competitions/${targetSlug}/quiz/${targetCategoryId}/take?code=${encodeURIComponent(accessCode)}`);
   }
 
   return (
