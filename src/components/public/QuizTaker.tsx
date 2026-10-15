@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Clock, Lock, Loader2, Code2 } from "lucide-react";
+import { CheckCircle, Clock, Lock, Loader2, Code2, ZoomIn, X, ImageIcon } from "lucide-react";
 import { highlightCode } from "@/lib/prism";
 
 function CodeViewer({ code, language }: { code: string; language?: string }) {
@@ -88,6 +88,7 @@ export function QuizTaker({
   
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number>(perQuestionDuration);
   const [warningTimeLeft, setWarningTimeLeft] = useState<number | null>(null);
+  const [zoomedImage, setZoomedImage] = useState<{ url: string; title: string; badge?: string } | null>(null);
 
   const router = useRouter();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -454,18 +455,45 @@ export function QuizTaker({
           {/* Middle section: Options & Optional Attachments (Image and/or Code) */}
           {(() => {
             const rawOpts = typeof currentQ.options === 'string' ? JSON.parse(currentQ.options) : currentQ.options;
-            const currentOptions: string[] = Array.isArray(rawOpts) ? rawOpts : [];
+            const currentOptions: any[] = Array.isArray(rawOpts) ? rawOpts : [];
             const hasImage = !!currentQ.image;
             const hasCode = !!(currentQ.code && currentQ.code.trim());
             const hasAttachments = hasImage || hasCode;
 
+            const normalizedOptions = currentOptions.map((opt: any) => {
+              if (typeof opt === 'string') {
+                return { text: opt, image: null };
+              }
+              return {
+                text: typeof opt?.text === 'string' ? opt.text : '',
+                image: opt?.image || null,
+              };
+            });
+
+            const hasOptionImages = normalizedOptions.some((opt: any) => !!opt.image);
+
             return (
-              <div className={`gap-4 flex-1 min-h-0 my-auto flex flex-col justify-center w-full ${hasAttachments ? 'lg:grid lg:grid-cols-2 items-stretch' : 'max-w-4xl mx-auto'}`}>
+              <div className={`gap-4 flex-1 min-h-0 my-auto flex flex-col justify-center w-full ${hasAttachments ? 'lg:grid lg:grid-cols-2 items-stretch' : hasOptionImages ? 'max-w-5xl mx-auto' : 'max-w-4xl mx-auto'}`}>
                 {hasAttachments && (
                   <div className="flex flex-col gap-3 overflow-y-auto max-h-[35vh] lg:max-h-none pr-1">
                     {hasImage && (
-                      <div className="relative w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-gray-50 p-2 min-h-[140px] flex items-center justify-center shrink-0">
-                        <img src={currentQ.image} alt="Question figure" className="w-full h-full max-h-[220px] object-contain" />
+                      <div 
+                        className="relative w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-gray-50 p-2 min-h-[140px] flex items-center justify-center shrink-0 group cursor-pointer"
+                        onClick={() => setZoomedImage({
+                          url: currentQ.image,
+                          title: `Question ${currentIndex + 1}`,
+                        })}
+                        title="Click to enlarge diagram"
+                      >
+                        <img 
+                          src={currentQ.image} 
+                          alt="Question figure" 
+                          className="w-full h-full max-h-[220px] object-contain pointer-events-none select-none" 
+                          draggable={false}
+                        />
+                        <div className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ZoomIn className="w-4 h-4" />
+                        </div>
                       </div>
                     )}
                     {hasCode && (
@@ -476,14 +504,121 @@ export function QuizTaker({
                   </div>
                 )}
                 
-                <div className="space-y-2 sm:space-y-2.5 w-full my-auto">
-                  {currentOptions.map((opt: string, i: number) => {
-                    if (opt === undefined || opt === null || (typeof opt === 'string' && opt.trim() === '')) {
+                <div className={`w-full my-auto overflow-y-auto max-h-[58vh] pr-1 ${
+                  hasOptionImages
+                    ? hasAttachments
+                      ? 'grid grid-cols-1 sm:grid-cols-2 gap-2.5'
+                      : 'grid grid-cols-1 sm:grid-cols-2 gap-3.5'
+                    : 'space-y-2 sm:space-y-2.5'
+                }`}>
+                  {normalizedOptions.map((opt: { text: string; image: string | null }, i: number) => {
+                    if ((!opt.text || opt.text.trim() === '') && !opt.image) {
                       return null;
                     }
                     const isSelected = answers[currentQ.id] === i.toString();
                     const letter = String.fromCharCode(65 + i);
 
+                    if (hasOptionImages) {
+                      return (
+                        <div
+                          key={i}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => selectOption(currentQ.id, i.toString())}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              selectOption(currentQ.id, i.toString());
+                            }
+                          }}
+                          className={`w-full text-left p-3 sm:p-3.5 rounded-2xl border-2 transition-all duration-150 flex flex-col justify-between shrink-0 relative group cursor-pointer select-none ${
+                            isSelected 
+                              ? 'border-maroon-600 bg-maroon-50/80 text-maroon-900 shadow-md ring-2 ring-maroon-600/30' 
+                              : 'border-gray-200 hover:border-maroon-300 hover:bg-gray-50/70 bg-white text-gray-800'
+                          }`}
+                        >
+                          {/* Option Header: Letter & Zoom Button */}
+                          <div className="flex items-center justify-between w-full mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 transition-colors ${
+                                isSelected ? 'bg-maroon-600 text-white shadow-xs' : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {letter}
+                              </span>
+                              {isSelected && (
+                                <span className="text-[11px] font-bold text-maroon-700 uppercase tracking-wider flex items-center gap-1">
+                                  <CheckCircle className="w-3.5 h-3.5 text-maroon-600" /> Selected
+                                </span>
+                              )}
+                            </div>
+
+                            {opt.image && (
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setZoomedImage({
+                                    url: opt.image!,
+                                    title: `Answer ${i + 1}`,
+                                    badge: letter,
+                                  });
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    setZoomedImage({
+                                      url: opt.image!,
+                                      title: `Answer ${i + 1}`,
+                                      badge: letter,
+                                    });
+                                  }
+                                }}
+                                className="text-gray-400 hover:text-maroon-700 p-1.5 hover:bg-maroon-100/60 rounded-lg transition-colors cursor-zoom-in"
+                                title="Zoom in on diagram"
+                              >
+                                <ZoomIn className="w-4 h-4" />
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Image Box */}
+                          {opt.image && (
+                            <div 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setZoomedImage({
+                                  url: opt.image!,
+                                  title: `Answer ${i + 1}`,
+                                  badge: letter,
+                                });
+                              }}
+                              className="w-full bg-white rounded-xl border border-gray-200/80 p-2 mb-2 flex items-center justify-center overflow-hidden min-h-[90px] max-h-[160px] sm:max-h-[180px] cursor-zoom-in"
+                              title="Click to zoom in"
+                            >
+                              <img
+                                src={opt.image}
+                                alt={`Option ${letter}`}
+                                className="max-h-[150px] sm:max-h-[170px] w-auto max-w-full object-contain pointer-events-none select-none"
+                                draggable={false}
+                              />
+                            </div>
+                          )}
+
+                          {/* Text description (if present) */}
+                          {opt.text && (
+                            <p className={`text-xs sm:text-sm font-medium leading-relaxed break-words mt-1 ${
+                              isSelected ? 'text-maroon-950 font-semibold' : 'text-gray-800'
+                            }`}>
+                              {opt.text}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // Standard text-only option layout
                     return (
                       <button
                         key={i}
@@ -500,7 +635,7 @@ export function QuizTaker({
                         }`}>
                           {letter}
                         </span>
-                        <span className="text-sm sm:text-base leading-snug break-words flex-1">{opt}</span>
+                        <span className="text-sm sm:text-base leading-snug break-words flex-1">{opt.text}</span>
                       </button>
                     );
                   })}
@@ -551,6 +686,48 @@ export function QuizTaker({
           </div>
         </div>
       </div>
+
+      {/* Enlarged Diagram Lightbox */}
+      {zoomedImage && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 select-none"
+          onClick={() => setZoomedImage(null)}
+        >
+          <div 
+            className="relative max-w-4xl w-full max-h-[90vh] bg-white rounded-3xl p-4 sm:p-6 shadow-2xl overflow-hidden flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex justify-between items-center mb-3 pb-2.5 border-b border-gray-100">
+              <div className="flex items-center gap-2.5">
+                {zoomedImage.badge && (
+                  <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-maroon-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center shadow-xs">
+                    {zoomedImage.badge}
+                  </span>
+                )}
+                <span className="text-sm sm:text-base font-bold text-maroon-950">
+                  {zoomedImage.title}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setZoomedImage(null)}
+                className="text-gray-500 hover:text-gray-800 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-auto max-h-[75vh] w-full flex items-center justify-center p-2 bg-gray-50/50 rounded-2xl border border-gray-100">
+              <img
+                src={zoomedImage.url}
+                alt={zoomedImage.title}
+                className="max-h-[70vh] w-auto max-w-full object-contain pointer-events-none select-none"
+                draggable={false}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

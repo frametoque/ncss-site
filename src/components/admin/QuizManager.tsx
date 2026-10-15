@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from "react";
 import { saveQuizQuestions } from "@/app/admin/competitions/[id]/quizzes/actions";
 import { useRouter } from "next/navigation";
-import { Code2, Trash2, Plus, GripVertical, CheckCircle, FileCode } from "lucide-react";
+import { Code2, Trash2, Plus, GripVertical, CheckCircle, FileCode, ImageIcon, X, ZoomIn } from "lucide-react";
 import { highlightCode } from "@/lib/prism";
 
 const CODE_LANGUAGES = [
@@ -164,10 +164,21 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
   const [questions, setQuestions] = useState<any[]>(() => {
     return initialQuestions.map(q => {
       const parsedOptions = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
-      const opts = Array.isArray(parsedOptions) ? [...parsedOptions] : [];
+      const opts = Array.isArray(parsedOptions)
+        ? parsedOptions.map((opt: any) => {
+            if (typeof opt === 'string') {
+              return { text: opt, image: null, imageFile: null };
+            }
+            return {
+              text: opt?.text || "",
+              image: opt?.image || null,
+              imageFile: null
+            };
+          })
+        : [];
       // Ensure at least 5 options by default
       while (opts.length < 5) {
-        opts.push("");
+        opts.push({ text: "", image: null, imageFile: null });
       }
       return {
         ...q,
@@ -180,6 +191,8 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
     });
   });
 
+  const [adminPreviewImage, setAdminPreviewImage] = useState<string | null>(null);
+  const [savingProgress, setSavingProgress] = useState<string | null>(null);
   const router = useRouter();
 
   const addQuestion = () => {
@@ -187,7 +200,13 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
       ...questions,
       {
         questionText: "",
-        options: ["", "", "", "", ""],
+        options: [
+          { text: "", image: null, imageFile: null },
+          { text: "", image: null, imageFile: null },
+          { text: "", image: null, imageFile: null },
+          { text: "", image: null, imageFile: null },
+          { text: "", image: null, imageFile: null },
+        ],
         correctOption: "0",
         code: "",
         codeLanguage: "python",
@@ -202,10 +221,26 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
     setQuestions(newQ);
   };
 
-  const updateOption = (qIndex: number, oIndex: number, value: string) => {
+  const updateOptionText = (qIndex: number, oIndex: number, value: string) => {
     const newQ = [...questions];
     const newOpts = [...newQ[qIndex].options];
-    newOpts[oIndex] = value;
+    newOpts[oIndex] = { ...newOpts[oIndex], text: value };
+    newQ[qIndex] = { ...newQ[qIndex], options: newOpts };
+    setQuestions(newQ);
+  };
+
+  const updateOptionImage = (qIndex: number, oIndex: number, file: File | null) => {
+    const newQ = [...questions];
+    const newOpts = [...newQ[qIndex].options];
+    newOpts[oIndex] = { ...newOpts[oIndex], imageFile: file };
+    newQ[qIndex] = { ...newQ[qIndex], options: newOpts };
+    setQuestions(newQ);
+  };
+
+  const removeOptionImage = (qIndex: number, oIndex: number) => {
+    const newQ = [...questions];
+    const newOpts = [...newQ[qIndex].options];
+    newOpts[oIndex] = { ...newOpts[oIndex], image: null, imageFile: null };
     newQ[qIndex] = { ...newQ[qIndex], options: newOpts };
     setQuestions(newQ);
   };
@@ -216,7 +251,7 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
     if (currentOpts.length >= 8) return;
     newQ[qIndex] = {
       ...newQ[qIndex],
-      options: [...currentOpts, ""]
+      options: [...currentOpts, { text: "", image: null, imageFile: null }]
     };
     setQuestions(newQ);
   };
@@ -253,6 +288,7 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
   const saveQuestions = async () => {
     if (isSaving) return;
     setIsSaving(true);
+    setSavingProgress("Uploading media...");
     try {
       const finalQuestions = [...questions];
       
@@ -263,7 +299,9 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
       };
 
       for (let i = 0; i < finalQuestions.length; i++) {
+        // Upload question image if newly provided
         if (finalQuestions[i].imageFile) {
+          setSavingProgress(`Uploading question ${i + 1} image...`);
           const url = await uploadFile(finalQuestions[i].imageFile);
           finalQuestions[i].image = url;
         }
@@ -276,8 +314,25 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
           finalQuestions[i].code = null;
           finalQuestions[i].codeLanguage = null;
         }
+
+        // Upload any option images and prepare clean options
+        const cleanOptions = [];
+        for (let j = 0; j < finalQuestions[i].options.length; j++) {
+          const opt = finalQuestions[i].options[j];
+          let optImageUrl = opt.image || null;
+          if (opt.imageFile) {
+            setSavingProgress(`Uploading option ${String.fromCharCode(65 + j)} image for question ${i + 1}...`);
+            optImageUrl = await uploadFile(opt.imageFile);
+          }
+          cleanOptions.push({
+            text: opt.text || "",
+            image: optImageUrl
+          });
+        }
+        finalQuestions[i].options = cleanOptions;
       }
 
+      setSavingProgress("Saving questions to database...");
       await saveQuizQuestions(category.id, finalQuestions);
       alert("Questions saved successfully!");
       router.refresh();
@@ -286,6 +341,7 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
       alert("Failed to save questions");
     } finally {
       setIsSaving(false);
+      setSavingProgress(null);
     }
   };
 
@@ -377,6 +433,11 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
                         Image attached
                       </span>
                     )}
+                    {q.options?.some((o: any) => o.image || o.imageFile) && (
+                      <span className="text-[11px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                        <ImageIcon className="w-3 h-3" /> Answer images
+                      </span>
+                    )}
                     <button 
                       onClick={() => removeQuestion(qIndex)} 
                       className="text-red-500 hover:text-red-700 text-xs font-medium flex items-center gap-1 transition-colors"
@@ -402,7 +463,7 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
                     <label className="block text-xs font-medium text-maroon-800 mb-1">Question Image (optional)</label>
                     <input 
                       type="file" 
-                      accept="image/png, image/jpeg, image/webp"
+                      accept="image/png, image/jpeg, image/webp" 
                       onChange={(e) => updateQuestion(qIndex, 'imageFile', e.target.files?.[0] || null)}
                       className="w-full px-3 py-1.5 border border-maroon-200 rounded-lg text-sm bg-white file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-maroon-50 file:text-maroon-700 hover:file:bg-maroon-100"
                     />
@@ -498,15 +559,17 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
                   </div>
 
                   <div className="space-y-2">
-                    {q.options.map((opt: string, oIndex: number) => {
+                    {q.options.map((opt: any, oIndex: number) => {
                       const letter = String.fromCharCode(65 + oIndex); // A, B, C, D, E...
                       const isCorrect = q.correctOption === oIndex.toString();
+                      const hasImage = !!(opt.image || opt.imageFile);
+                      const previewUrl = opt.imageFile ? URL.createObjectURL(opt.imageFile) : (opt.image || "");
 
                       return (
                         <div 
                           key={oIndex} 
-                          className={`flex gap-2 items-center p-1.5 rounded-lg border transition-all ${
-                            isCorrect ? 'bg-emerald-50/60 border-emerald-300' : 'bg-white border-maroon-100'
+                          className={`flex flex-col sm:flex-row gap-2 items-start sm:items-center p-2 rounded-xl border transition-all ${
+                            isCorrect ? 'bg-emerald-50/70 border-emerald-300 shadow-xs' : 'bg-white border-maroon-100 hover:border-maroon-200'
                           } ${draggedOption?.qIndex === qIndex && draggedOption?.oIndex === oIndex ? 'opacity-40' : ''}`}
                           draggable
                           onDragStart={(e) => {
@@ -519,43 +582,109 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
                           }}
                           onDrop={(e) => handleDropOption(e, qIndex, oIndex)}
                         >
-                          <span className="text-maroon-300 hover:text-maroon-600 cursor-grab px-1 text-base leading-none">
-                            <GripVertical className="w-3.5 h-3.5 inline" />
-                          </span>
-
-                          <label className="flex items-center gap-1.5 cursor-pointer">
-                            <input 
-                              type="radio" 
-                              name={`correct-${qIndex}`} 
-                              checked={isCorrect}
-                              onChange={() => updateQuestion(qIndex, 'correctOption', oIndex.toString())}
-                              className="text-maroon-600 focus:ring-maroon-500 cursor-pointer w-4 h-4"
-                            />
-                            <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold transition-colors ${
-                              isCorrect ? 'bg-emerald-600 text-white' : 'bg-maroon-100 text-maroon-800'
-                            }`}>
-                              {letter}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-maroon-300 hover:text-maroon-600 cursor-grab px-1 text-base leading-none">
+                              <GripVertical className="w-3.5 h-3.5 inline" />
                             </span>
-                          </label>
 
-                          <input 
-                            type="text" 
-                            value={opt} 
-                            onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                            className="flex-1 px-3 py-1.5 border border-maroon-200 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-maroon-500"
-                            placeholder={`Option ${letter} (Option ${oIndex + 1})`}
-                          />
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name={`correct-${qIndex}`} 
+                                checked={isCorrect}
+                                onChange={() => updateQuestion(qIndex, 'correctOption', oIndex.toString())}
+                                className="text-maroon-600 focus:ring-maroon-500 cursor-pointer w-4 h-4"
+                              />
+                              <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold transition-colors ${
+                                isCorrect ? 'bg-emerald-600 text-white' : 'bg-maroon-100 text-maroon-800'
+                              }`}>
+                                {letter}
+                              </span>
+                            </label>
+                          </div>
 
-                          {q.options.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() => removeOption(qIndex, oIndex)}
-                              className="text-gray-400 hover:text-red-500 p-1 transition-colors"
-                              title="Delete option"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          <div className="flex-1 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full min-w-0">
+                            <input 
+                              type="text" 
+                              value={opt.text || ""} 
+                              onChange={(e) => updateOptionText(qIndex, oIndex, e.target.value)}
+                              className="flex-1 px-3 py-1.5 border border-maroon-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-maroon-500"
+                              placeholder={`Option ${letter} text (optional if image is attached)`}
+                            />
+
+                            {/* Option image attachment */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {hasImage ? (
+                                <div className="flex items-center gap-2 bg-maroon-50/70 border border-maroon-200 rounded-lg p-1 pr-2">
+                                  <div 
+                                    className="relative w-9 h-9 rounded border border-maroon-200 overflow-hidden bg-white shrink-0 flex items-center justify-center cursor-pointer group"
+                                    onClick={() => setAdminPreviewImage(previewUrl)}
+                                    title="Click to preview image"
+                                  >
+                                    <img 
+                                      src={previewUrl} 
+                                      alt={`Option ${letter}`} 
+                                      className="w-full h-full object-contain"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                      <ZoomIn className="w-3.5 h-3.5" />
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col text-[11px] max-w-[100px] leading-tight">
+                                    <span className="font-semibold text-maroon-900 truncate" title={opt.imageFile ? opt.imageFile.name : "Image attached"}>
+                                      {opt.imageFile ? opt.imageFile.name : "Image attached"}
+                                    </span>
+                                    <span className={opt.imageFile ? "text-emerald-600 font-medium text-[10px]" : "text-blue-600 text-[10px]"}>
+                                      {opt.imageFile ? "New file" : "Saved"}
+                                    </span>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => removeOptionImage(qIndex, oIndex)}
+                                    className="text-gray-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
+                                    title="Remove option image"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div>
+                                  <input 
+                                    type="file" 
+                                    id={`opt-img-${qIndex}-${oIndex}`} 
+                                    accept="image/png, image/jpeg, image/webp" 
+                                    className="hidden" 
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0] || null;
+                                      if (file) updateOptionImage(qIndex, oIndex, file);
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                  <label 
+                                    htmlFor={`opt-img-${qIndex}-${oIndex}`} 
+                                    className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-dashed border-maroon-300 hover:border-maroon-500 hover:bg-maroon-50 text-maroon-700 rounded-lg text-xs font-medium transition-colors"
+                                    title="Attach diagram or image to this option"
+                                  >
+                                    <ImageIcon className="w-3.5 h-3.5 text-maroon-500" />
+                                    <span className="hidden sm:inline">Add Image</span>
+                                  </label>
+                                </div>
+                              )}
+
+                              {q.options.length > 2 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeOption(qIndex, oIndex)}
+                                  className="text-gray-400 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-lg transition-colors ml-auto sm:ml-0"
+                                  title="Delete option"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -590,11 +719,44 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
               disabled={isSaving} 
               className="px-6 py-2.5 bg-maroon-800 text-white rounded-lg hover:bg-maroon-900 font-semibold disabled:opacity-50 shadow-sm transition-all"
             >
-              {isSaving ? "Saving Questions..." : "Save Questions"}
+              {isSaving ? (savingProgress || "Saving Questions...") : "Save Questions"}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Admin Image Enlarged Modal */}
+      {adminPreviewImage && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 select-none"
+          onClick={() => setAdminPreviewImage(null)}
+        >
+          <div 
+            className="relative max-w-2xl w-full bg-white rounded-2xl p-4 shadow-2xl flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
+              <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4 text-maroon-600" /> Option Diagram Preview
+              </span>
+              <button
+                type="button"
+                onClick={() => setAdminPreviewImage(null)}
+                className="text-gray-500 hover:text-gray-800 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-auto max-h-[70vh] w-full flex items-center justify-center p-2 bg-gray-50 rounded-xl border border-gray-100">
+              <img
+                src={adminPreviewImage}
+                alt="Enlarged Preview"
+                className="max-h-[65vh] w-auto max-w-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
