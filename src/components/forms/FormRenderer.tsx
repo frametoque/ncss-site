@@ -112,10 +112,20 @@ export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
       }
 
       setUploadProgress(null);
-      await submitPublicForm(form.id, formData);
+      const res = await submitPublicForm(form.id, formData);
+      if (!res.success) {
+        setError(res.error || "An unexpected error occurred while submitting.");
+        setIsSubmitting(false);
+        return;
+      }
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+      const msg = err?.message || "";
+      if (msg.includes("Minified React error") || msg.includes("react.dev/errors")) {
+        setError("An unexpected error occurred during submission. If this form is limited to 1 response, you may have already submitted.");
+      } else {
+        setError(msg || "An unexpected error occurred.");
+      }
       setUploadProgress(null);
     }
     setIsSubmitting(false);

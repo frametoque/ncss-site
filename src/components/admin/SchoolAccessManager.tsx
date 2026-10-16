@@ -14,6 +14,9 @@ import {
   parseCategorySubject,
   SubjectGroup 
 } from "@/lib/quizSubjects";
+import { 
+  exportSubjectAccessCodesPdf 
+} from "@/lib/schoolAccessPdf";
 import { useRouter } from "next/navigation";
 import { 
   Plus, 
@@ -23,7 +26,10 @@ import {
   Check, 
   AlertCircle, 
   Download,
-  X
+  X,
+  FileDown,
+  FileText,
+  ChevronDown
 } from "lucide-react";
 
 interface Category {
@@ -47,12 +53,14 @@ interface SchoolSubjectRow {
 
 export function SchoolAccessManager({ 
   competitionId, 
+  competitionTitle = "Competition",
   categories = [], 
   initialAccesses = [],
   selectedCategoryId,
   linkedForms = []
 }: { 
   competitionId: string;
+  competitionTitle?: string;
   categories: Category[];
   initialAccesses: any[];
   selectedCategoryId?: string;
@@ -493,6 +501,58 @@ export function SchoolAccessManager({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [accesses]);
 
+  // PDF Export State & Handlers
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleExportSubjectPdf = (grp?: SubjectGroup<Category> | null) => {
+    const targetGroup = grp || activeSubjectGroup;
+    if (!targetGroup) return;
+
+    setIsExportingPdf(true);
+    setShowExportMenu(false);
+    setTimeout(() => {
+      try {
+        const catIds = new Set(targetGroup.categoryIds);
+        const map = new Map<string, string>();
+        for (const a of accesses) {
+          if (a.categoryId && catIds.has(a.categoryId)) {
+            const sName = a.schoolName?.trim();
+            const code = a.accessCode?.trim().toUpperCase();
+            if (sName && code && !map.has(sName)) {
+              map.set(sName, code);
+            }
+          }
+        }
+        const rows = Array.from(map.entries())
+          .filter(([schoolName]) => !schoolName.toLowerCase().includes("test"))
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([schoolName, accessCode]) => ({ schoolName, accessCode }));
+
+        exportSubjectAccessCodesPdf({
+          competitionTitle,
+          subjectGroup: targetGroup,
+          schoolRows: rows,
+        });
+      } catch (err: any) {
+        alert(`Failed to export PDF: ${err.message || "Unknown error"}`);
+      } finally {
+        setIsExportingPdf(false);
+      }
+    }, 50);
+  };
+
   if (categories.length === 0) {
     return (
       <div className="bg-white p-6 rounded-xl border border-maroon-100 shadow-sm text-center">
@@ -528,7 +588,6 @@ export function SchoolAccessManager({
             </button>
           )}
 
-
           <button
             type="button"
             onClick={() => setShowAddToAllModal(true)}
@@ -546,6 +605,63 @@ export function SchoolAccessManager({
             {copiedSubject ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
             {copiedSubject ? "Copied to Clipboard!" : "Copy Codes"}
           </button>
+
+          {/* Export PDF Button: Subject-wise only */}
+          {activeSubjectGroup ? (
+            <button
+              type="button"
+              onClick={() => handleExportSubjectPdf(activeSubjectGroup)}
+              disabled={isExportingPdf}
+              className="px-3 py-1.5 bg-maroon-800 text-white rounded-lg text-xs font-semibold hover:bg-maroon-900 border border-maroon-900 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+              title={`Export ${activeSubjectGroup.subject} access codes as PDF`}
+            >
+              {isExportingPdf ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <FileDown className="w-3.5 h-3.5" />
+              )}
+              <span>{isExportingPdf ? "Exporting..." : `Export ${activeSubjectGroup.subject} PDF`}</span>
+            </button>
+          ) : (
+            subjectGroups.length > 0 && (
+              <div className="relative" ref={exportMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowExportMenu(prev => !prev)}
+                  disabled={isExportingPdf}
+                  className="px-3 py-1.5 bg-maroon-800 text-white rounded-lg text-xs font-semibold hover:bg-maroon-900 border border-maroon-900 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                  title="Export Subject Access Codes as PDF"
+                >
+                  {isExportingPdf ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <FileDown className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isExportingPdf ? "Exporting..." : "Export PDF"}</span>
+                  <ChevronDown className="w-3 h-3 opacity-80" />
+                </button>
+
+                {showExportMenu && (
+                  <div className="absolute right-0 mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-30 text-left">
+                    <div className="px-3 py-1 border-b border-gray-100 mb-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Select Subject to Export</p>
+                    </div>
+                    {subjectGroups.map(grp => (
+                      <button
+                        key={grp.subject}
+                        type="button"
+                        onClick={() => handleExportSubjectPdf(grp)}
+                        className="w-full px-3 py-2 text-left text-xs text-gray-800 hover:bg-maroon-50 hover:text-maroon-900 flex items-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-maroon-700 shrink-0" />
+                        <span className="font-medium text-gray-900">{grp.subject}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          )}
         </div>
       </div>
 
@@ -855,6 +971,21 @@ export function SchoolAccessManager({
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleExportSubjectPdf(activeSubjectGroup)}
+                disabled={isExportingPdf}
+                className="px-3 py-1.5 bg-white text-maroon-800 rounded-lg text-xs font-semibold hover:bg-maroon-100/50 border border-maroon-200 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                title={`Export ${activeSubjectGroup.subject} codes as PDF`}
+              >
+                {isExportingPdf ? (
+                  <div className="w-3.5 h-3.5 border-2 border-maroon-800 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5" />
+                )}
+                <span>Export PDF</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => copyCodesToClipboard(activeSubjectGroup.subject)}

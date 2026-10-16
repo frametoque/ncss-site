@@ -11,7 +11,8 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const categories = await getQuizCategories(id);
   const accesses = await getSchoolAccesses(id);
-  const compRes = await pool.query('SELECT "acceptingQuizAnswers" FROM "competition" WHERE id = $1', [id]);
+  const compRes = await pool.query('SELECT title, "acceptingQuizAnswers" FROM "competition" WHERE id = $1', [id]);
+  const competitionTitle = compRes.rows[0]?.title || "Competition";
   const formsRes = await pool.query('SELECT id, title FROM "form" WHERE "competitionId" = $1', [id]);
   const linkedForms = formsRes.rows;
 
@@ -122,7 +123,13 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
         )}
       </div>
 
-      <SchoolAccessManager competitionId={id} categories={categories} initialAccesses={accesses} linkedForms={linkedForms} />
+      <SchoolAccessManager 
+        competitionId={id} 
+        competitionTitle={competitionTitle}
+        categories={categories} 
+        initialAccesses={accesses} 
+        linkedForms={linkedForms} 
+      />
     </div>
   );
 }
