@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",

@@ -1,9 +1,11 @@
-import { getQuizCategories, createQuizCategory, deleteQuizCategory, getSchoolAccesses } from "./actions";
+import { getQuizCategories, createQuizCategory, getSchoolAccesses } from "./actions";
 import Link from "next/link";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { SchoolAccessManager } from "@/components/admin/SchoolAccessManager";
 import { AcceptAnswersToggle } from "@/components/admin/AcceptAnswersToggle";
+import { SubjectCard } from "@/components/admin/SubjectCard";
 import pool from "@/lib/db";
+import { groupCategoriesBySubject } from "@/lib/quizSubjects";
 
 export default async function QuizzesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,6 +15,30 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
   const formsRes = await pool.query('SELECT id, title FROM "form" WHERE "competitionId" = $1', [id]);
   const linkedForms = formsRes.rows;
 
+  const categoryIds = categories.map(c => c.id);
+  const [qCountRes, subCountRes] = categoryIds.length > 0 ? await Promise.all([
+    pool.query(
+      'SELECT "categoryId", count(*)::int as count FROM quiz_question WHERE "categoryId" = ANY($1::text[]) GROUP BY "categoryId"',
+      [categoryIds]
+    ),
+    pool.query(
+      'SELECT "categoryId", count(*)::int as count FROM quiz_submission WHERE "categoryId" = ANY($1::text[]) GROUP BY "categoryId"',
+      [categoryIds]
+    )
+  ]) : [{ rows: [] }, { rows: [] }];
+
+  const questionCountObj: Record<string, number> = {};
+  for (const r of qCountRes.rows) {
+    questionCountObj[r.categoryId] = r.count;
+  }
+
+  const subCountMap = new Map<string, number>();
+  for (const r of subCountRes.rows) {
+    subCountMap.set(r.categoryId, r.count);
+  }
+
+  const subjects = groupCategoriesBySubject(categories);
+
   async function addAction(formData: FormData) {
     "use server";
     await createQuizCategory(
@@ -21,11 +47,6 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
       Number(formData.get("totalTime")) || null,
       Number(formData.get("questionTimer")) || 60
     );
-  }
-
-  async function deleteAction(formData: FormData) {
-    "use server";
-    await deleteQuizCategory(id, formData.get("categoryId") as string);
   }
 
   return (
@@ -75,51 +96,28 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {/* Subjects Grid: 3 cards per row */}
+      {/* Subjects Grid: Cards grouped per subject */}
       <div>
-        {categories.length === 0 ? (
+        {subjects.length === 0 ? (
           <div className="bg-white p-8 rounded-xl border border-maroon-100 shadow-sm text-center text-maroon-500">
             No quiz categories created yet. Add one above to get started.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map(cat => (
-              <div 
-                key={cat.id} 
-                className="bg-white p-5 rounded-xl border border-maroon-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4"
-              >
-                <div>
-                  <h3 className="text-base font-bold text-maroon-900 mb-1 leading-snug">{cat.name}</h3>
-                  <p className="text-xs text-maroon-600">
-                    Timer: {cat.questionTimer || 60} seconds per question
-                  </p>
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {subjects.map(sub => {
+              const totalSubs = sub.categories.reduce((acc, cat) => acc + (subCountMap.get(cat.id) || 0), 0);
 
-                <div className="flex items-center gap-2 pt-3 border-t border-maroon-50">
-                  <Link 
-                    href={`/admin/competitions/${id}/quizzes/${cat.id}`} 
-                    className="flex-1 text-center py-2 px-2 bg-maroon-100 text-maroon-800 rounded-lg text-xs font-semibold hover:bg-maroon-200 transition-colors"
-                  >
-                    Manage Quiz
-                  </Link>
-                  <Link 
-                    href={`/admin/competitions/${id}/quizzes/${cat.id}/submissions`} 
-                    className="flex-1 text-center py-2 px-2 bg-maroon-50 text-maroon-700 rounded-lg text-xs font-semibold hover:bg-maroon-100 border border-maroon-200 transition-colors"
-                  >
-                    Submissions
-                  </Link>
-                  <form action={deleteAction}>
-                    <input type="hidden" name="categoryId" value={cat.id} />
-                    <button 
-                      type="submit" 
-                      className="px-2.5 py-2 bg-red-50 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-100 border border-red-200 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </form>
-                </div>
-              </div>
-            ))}
+              return (
+                <SubjectCard
+                  key={sub.subject}
+                  competitionId={id}
+                  subject={sub.subject}
+                  categories={sub.categories}
+                  questionCountMap={questionCountObj}
+                  totalSubmissions={totalSubs}
+                />
+              );
+            })}
           </div>
         )}
       </div>

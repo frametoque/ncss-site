@@ -1,4 +1,4 @@
-import { getQuizCategory, getQuizQuestions, updateQuizCategory, getSchoolAccessesByCategory } from "../actions";
+import { getQuizCategory, getQuizQuestions, updateQuizCategory, getQuizCategories, getSchoolAccesses } from "../actions";
 import Link from "next/link";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { QuizManager } from "@/components/admin/QuizManager";
@@ -6,9 +6,12 @@ import { SchoolAccessManager } from "@/components/admin/SchoolAccessManager";
 
 export default async function CategoryPage({ params }: { params: Promise<{ id: string, categoryId: string }> }) {
   const { id, categoryId } = await params;
-  const category = await getQuizCategory(categoryId);
-  const questions = await getQuizQuestions(categoryId);
-  const accesses = await getSchoolAccessesByCategory(categoryId);
+  const [category, questions, allCategories, allAccesses] = await Promise.all([
+    getQuizCategory(categoryId),
+    getQuizQuestions(categoryId),
+    getQuizCategories(id),
+    getSchoolAccesses(id)
+  ]);
 
   if (!category) {
     return <div>Category not found</div>;
@@ -50,8 +53,8 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
 
       <SchoolAccessManager 
         competitionId={id} 
-        categories={[category]} 
-        initialAccesses={accesses} 
+        categories={allCategories} 
+        initialAccesses={allAccesses} 
         selectedCategoryId={categoryId} 
       />
     </div>

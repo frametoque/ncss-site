@@ -3,8 +3,42 @@
 import React, { useState, useRef, useMemo } from "react";
 import { saveQuizQuestions } from "@/app/admin/competitions/[id]/quizzes/actions";
 import { useRouter } from "next/navigation";
-import { Code2, Trash2, Plus, GripVertical, CheckCircle, FileCode, ImageIcon, X, ZoomIn } from "lucide-react";
+import { Code2, Trash2, Plus, GripVertical, CheckCircle, FileCode, ImageIcon, X, ZoomIn, Loader2 } from "lucide-react";
 import { highlightCode } from "@/lib/prism";
+import { MathText } from "@/components/common/MathText";
+
+function getPastedImageFile(e: React.ClipboardEvent): File | null {
+  if (!e.clipboardData) return null;
+  const items = e.clipboardData.items;
+  if (items) {
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) return file;
+      }
+    }
+  }
+  const files = e.clipboardData.files;
+  if (files && files.length > 0) {
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].type && files[i].type.startsWith("image/")) {
+        return files[i];
+      }
+    }
+  }
+  return null;
+}
+
+async function uploadQuizFile(file: File, onProgress?: (pct: number) => void): Promise<string> {
+  const { upload } = await import('@/lib/upload-client');
+  const ext = file.type ? file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png' : 'png';
+  const hasOriginalName = file.name && file.name !== 'image.png' && file.name !== 'blob' && !file.name.startsWith('pasted_');
+  const safeName = hasOriginalName
+    ? `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+    : `pasted_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+  const res = await upload(`competitions/quiz/${safeName}`, file, onProgress ? (pct) => onProgress(pct) : undefined);
+  return res.url;
+}
 
 const CODE_LANGUAGES = [
   { value: "python", label: "Python", ext: "py" },
@@ -140,7 +174,7 @@ function CodeSnippetEditor({
             spellCheck={false}
             autoCapitalize="off"
             autoComplete="off"
-            className="absolute inset-0 w-full h-full m-0 p-3 font-mono text-xs leading-[20px] bg-transparent text-transparent caret-white selection:bg-[#264f78]/60 focus:outline-none resize-none whitespace-pre overflow-auto placeholder-[#6a9955]/70"
+            className="code-scroll absolute inset-0 w-full h-full m-0 p-3 font-mono text-xs leading-[20px] bg-transparent text-transparent caret-white selection:bg-[#264f78]/60 focus:outline-none resize-none whitespace-pre overflow-auto placeholder-[#6a9955]/70"
             style={{
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace',
               tabSize: 2,
@@ -193,7 +227,66 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
 
   const [adminPreviewImage, setAdminPreviewImage] = useState<string | null>(null);
   const [savingProgress, setSavingProgress] = useState<string | null>(null);
+  const [uploadingState, setUploadingState] = useState<{
+    type: 'question' | 'option';
+    qIndex: number;
+    oIndex?: number;
+  } | null>(null);
   const router = useRouter();
+
+  const handleOptionPaste = async (qIndex: number, oIndex: number, e: React.ClipboardEvent) => {
+    const file = getPastedImageFile(e);
+    if (!file) return; // Allow normal text paste
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    setUploadingState({ type: 'option', qIndex, oIndex });
+    try {
+      const url = await uploadQuizFile(file);
+      const newQ = [...questions];
+      const newOpts = [...newQ[qIndex].options];
+      newOpts[oIndex] = {
+        ...newOpts[oIndex],
+        image: url,
+        imageFile: null
+      };
+      newQ[qIndex] = { ...newQ[qIndex], options: newOpts };
+      setQuestions(newQ);
+    } catch (err: any) {
+      console.error("Failed to upload pasted image:", err);
+      updateOptionImage(qIndex, oIndex, file);
+      alert("Direct upload encountered an issue. The image was attached locally and will be saved when clicking Save Questions.");
+    } finally {
+      setUploadingState(null);
+    }
+  };
+
+  const handleQuestionPaste = async (qIndex: number, e: React.ClipboardEvent) => {
+    const file = getPastedImageFile(e);
+    if (!file) return; // Allow normal text paste
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    setUploadingState({ type: 'question', qIndex });
+    try {
+      const url = await uploadQuizFile(file);
+      const newQ = [...questions];
+      newQ[qIndex] = {
+        ...newQ[qIndex],
+        image: url,
+        imageFile: null
+      };
+      setQuestions(newQ);
+    } catch (err: any) {
+      console.error("Failed to upload pasted image:", err);
+      updateQuestion(qIndex, 'imageFile', file);
+      alert("Direct upload encountered an issue. The image was attached locally and will be saved when clicking Save Questions.");
+    } finally {
+      setUploadingState(null);
+    }
+  };
 
   const addQuestion = () => {
     setQuestions([
@@ -291,18 +384,12 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
     setSavingProgress("Uploading media...");
     try {
       const finalQuestions = [...questions];
-      
-      const uploadFile = async (file: File, onProgress?: (pct: number) => void): Promise<string> => {
-        const { upload } = await import('@/lib/upload-client');
-        const res = await upload(`competitions/quiz/${file.name}`, file, onProgress ? (pct) => onProgress(pct) : undefined);
-        return res.url;
-      };
 
       for (let i = 0; i < finalQuestions.length; i++) {
         // Upload question image if newly provided
         if (finalQuestions[i].imageFile) {
           setSavingProgress(`Uploading question ${i + 1} image...`);
-          const url = await uploadFile(finalQuestions[i].imageFile);
+          const url = await uploadQuizFile(finalQuestions[i].imageFile);
           finalQuestions[i].image = url;
         }
         // Remove transient client state
@@ -322,7 +409,7 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
           let optImageUrl = opt.image || null;
           if (opt.imageFile) {
             setSavingProgress(`Uploading option ${String.fromCharCode(65 + j)} image for question ${i + 1}...`);
-            optImageUrl = await uploadFile(opt.imageFile);
+            optImageUrl = await uploadQuizFile(opt.imageFile);
           }
           cleanOptions.push({
             text: opt.text || "",
@@ -453,26 +540,76 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
                     <textarea 
                       value={q.questionText} 
                       onChange={(e) => updateQuestion(qIndex, 'questionText', e.target.value)}
+                      onPaste={(e) => handleQuestionPaste(qIndex, e)}
                       className="w-full px-3 py-2 border border-maroon-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-maroon-500"
                       rows={2}
-                      placeholder="e.g. What will be the output of the following code snippet?"
+                      placeholder="e.g. What will be the output of the following code snippet? (Supports LaTeX math like $20^\circ\text{C}$ or $M_p : M_q : M_r$)"
                     />
+                    {q.questionText && q.questionText.includes('$') && (
+                      <div className="mt-1.5 px-3 py-2 bg-maroon-50/70 border border-maroon-200 rounded-lg text-sm text-gray-900 flex items-start gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-maroon-700 shrink-0 mt-0.5">Preview:</span>
+                        <div className="flex-1 font-medium leading-snug">
+                          <MathText text={q.questionText} />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-maroon-800 mb-1">Question Image (optional)</label>
-                    <input 
-                      type="file" 
-                      accept="image/png, image/jpeg, image/webp" 
-                      onChange={(e) => updateQuestion(qIndex, 'imageFile', e.target.files?.[0] || null)}
-                      className="w-full px-3 py-1.5 border border-maroon-200 rounded-lg text-sm bg-white file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-maroon-50 file:text-maroon-700 hover:file:bg-maroon-100"
-                    />
-                    {q.image && !q.imageFile && (
-                      <p className="text-xs text-maroon-600 mt-1 truncate">Current: {q.image}</p>
-                    )}
-                    {q.imageFile && (
-                      <p className="text-xs text-green-600 mt-1">New image selected: {q.imageFile.name}</p>
-                    )}
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-medium text-maroon-800">Question Image (optional)</label>
+                      {uploadingState?.type === 'question' && uploadingState.qIndex === qIndex ? (
+                        <span className="text-[11px] text-maroon-700 font-semibold flex items-center gap-1 animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Uploading image...
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-400">Paste (Ctrl+V) or browse</span>
+                      )}
+                    </div>
+
+                    <div 
+                      onPaste={(e) => handleQuestionPaste(qIndex, e)}
+                      className="space-y-1.5"
+                    >
+                      <input 
+                        type="file" 
+                        accept="image/png, image/jpeg, image/webp" 
+                        onChange={(e) => updateQuestion(qIndex, 'imageFile', e.target.files?.[0] || null)}
+                        className="w-full px-3 py-1.5 border border-maroon-200 rounded-lg text-sm bg-white file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-maroon-50 file:text-maroon-700 hover:file:bg-maroon-100"
+                      />
+
+                      {/* Question image preview & remove */}
+                      {(q.image || q.imageFile) && (
+                        <div className="flex items-center gap-2 p-1.5 bg-maroon-50/70 rounded-lg border border-maroon-200">
+                          <img 
+                            src={q.imageFile ? URL.createObjectURL(q.imageFile) : q.image} 
+                            alt="Question Diagram" 
+                            className="w-10 h-10 object-contain rounded bg-white border border-maroon-200 cursor-pointer"
+                            onClick={() => setAdminPreviewImage(q.imageFile ? URL.createObjectURL(q.imageFile) : q.image)}
+                            title="Click to preview"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-maroon-900 truncate">
+                              {q.imageFile ? q.imageFile.name : "Question Image attached"}
+                            </p>
+                            <span className={q.imageFile ? "text-emerald-700 font-medium text-[10px]" : "text-blue-600 text-[10px]"}>
+                              {q.imageFile ? "New file (ready to save)" : "Uploaded"}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateQuestion(qIndex, 'image', null);
+                              updateQuestion(qIndex, 'imageFile', null);
+                            }}
+                            className="text-gray-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
+                            title="Remove question image"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Code Attachment Section (ICT Only) */}
@@ -555,7 +692,9 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
                     <label className="block text-xs font-medium text-maroon-800">
                       Options & Correct Answer ({q.options.length} options)
                     </label>
-                    <span className="text-[11px] text-gray-500">Select the radio button for the correct answer</span>
+                    <span className="text-[11px] text-gray-500">
+                      Select option and Ctrl+V to paste image or browse
+                    </span>
                   </div>
 
                   <div className="space-y-2">
@@ -564,10 +703,12 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
                       const isCorrect = q.correctOption === oIndex.toString();
                       const hasImage = !!(opt.image || opt.imageFile);
                       const previewUrl = opt.imageFile ? URL.createObjectURL(opt.imageFile) : (opt.image || "");
+                      const isUploadingThisOption = uploadingState?.type === 'option' && uploadingState.qIndex === qIndex && uploadingState.oIndex === oIndex;
 
                       return (
                         <div 
                           key={oIndex} 
+                          onPaste={(e) => handleOptionPaste(qIndex, oIndex, e)}
                           className={`flex flex-col sm:flex-row gap-2 items-start sm:items-center p-2 rounded-xl border transition-all ${
                             isCorrect ? 'bg-emerald-50/70 border-emerald-300 shadow-xs' : 'bg-white border-maroon-100 hover:border-maroon-200'
                           } ${draggedOption?.qIndex === qIndex && draggedOption?.oIndex === oIndex ? 'opacity-40' : ''}`}
@@ -603,87 +744,105 @@ export function QuizManager({ category, initialQuestions }: { category: any, ini
                             </label>
                           </div>
 
-                          <div className="flex-1 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full min-w-0">
-                            <input 
-                              type="text" 
-                              value={opt.text || ""} 
-                              onChange={(e) => updateOptionText(qIndex, oIndex, e.target.value)}
-                              className="flex-1 px-3 py-1.5 border border-maroon-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-maroon-500"
-                              placeholder={`Option ${letter} text (optional if image is attached)`}
-                            />
+                          <div className="flex-1 flex flex-col gap-1.5 w-full min-w-0">
+                            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full min-w-0">
+                              <input 
+                                type="text" 
+                                value={opt.text || ""} 
+                                onChange={(e) => updateOptionText(qIndex, oIndex, e.target.value)}
+                                onPaste={(e) => handleOptionPaste(qIndex, oIndex, e)}
+                                className="flex-1 px-3 py-1.5 border border-maroon-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-maroon-500"
+                                placeholder={`Option ${letter} text (supports LaTeX math e.g. $20^\\circ\\text{C}$)`}
+                              />
 
-                            {/* Option image attachment */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              {hasImage ? (
-                                <div className="flex items-center gap-2 bg-maroon-50/70 border border-maroon-200 rounded-lg p-1 pr-2">
-                                  <div 
-                                    className="relative w-9 h-9 rounded border border-maroon-200 overflow-hidden bg-white shrink-0 flex items-center justify-center cursor-pointer group"
-                                    onClick={() => setAdminPreviewImage(previewUrl)}
-                                    title="Click to preview image"
-                                  >
-                                    <img 
-                                      src={previewUrl} 
-                                      alt={`Option ${letter}`} 
-                                      className="w-full h-full object-contain"
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                                      <ZoomIn className="w-3.5 h-3.5" />
+                              {/* Option image attachment */}
+                              <div className="flex items-center gap-2 shrink-0">
+                                {isUploadingThisOption ? (
+                                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-maroon-100/80 border border-maroon-300 rounded-lg text-xs font-semibold text-maroon-900 animate-pulse">
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-maroon-700" />
+                                    <span>Uploading image...</span>
+                                  </div>
+                                ) : hasImage ? (
+                                  <div className="flex items-center gap-2 bg-maroon-50/70 border border-maroon-200 rounded-lg p-1 pr-2">
+                                    <div 
+                                      className="relative w-9 h-9 rounded border border-maroon-200 overflow-hidden bg-white shrink-0 flex items-center justify-center cursor-pointer group"
+                                      onClick={() => setAdminPreviewImage(previewUrl)}
+                                      title="Click to preview image"
+                                    >
+                                      <img 
+                                        src={previewUrl} 
+                                        alt={`Option ${letter}`} 
+                                        className="w-full h-full object-contain"
+                                      />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                        <ZoomIn className="w-3.5 h-3.5" />
+                                      </div>
                                     </div>
-                                  </div>
 
-                                  <div className="flex flex-col text-[11px] max-w-[100px] leading-tight">
-                                    <span className="font-semibold text-maroon-900 truncate" title={opt.imageFile ? opt.imageFile.name : "Image attached"}>
-                                      {opt.imageFile ? opt.imageFile.name : "Image attached"}
-                                    </span>
-                                    <span className={opt.imageFile ? "text-emerald-600 font-medium text-[10px]" : "text-blue-600 text-[10px]"}>
-                                      {opt.imageFile ? "New file" : "Saved"}
-                                    </span>
-                                  </div>
+                                    <div className="flex flex-col text-[11px] max-w-[100px] leading-tight">
+                                      <span className="font-semibold text-maroon-900 truncate" title={opt.imageFile ? opt.imageFile.name : "Image attached"}>
+                                        {opt.imageFile ? opt.imageFile.name : "Image attached"}
+                                      </span>
+                                      <span className={opt.imageFile ? "text-emerald-600 font-medium text-[10px]" : "text-blue-600 text-[10px]"}>
+                                        {opt.imageFile ? "New file" : "Saved"}
+                                      </span>
+                                    </div>
 
+                                    <button
+                                      type="button"
+                                      onClick={() => removeOptionImage(qIndex, oIndex)}
+                                      className="text-gray-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
+                                      title="Remove option image"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <input 
+                                      type="file" 
+                                      id={`opt-img-${qIndex}-${oIndex}`} 
+                                      accept="image/png, image/jpeg, image/webp" 
+                                      className="hidden" 
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        if (file) updateOptionImage(qIndex, oIndex, file);
+                                        e.target.value = "";
+                                      }}
+                                    />
+                                    <label 
+                                      htmlFor={`opt-img-${qIndex}-${oIndex}`} 
+                                      className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-dashed border-maroon-300 hover:border-maroon-500 hover:bg-maroon-50 text-maroon-700 rounded-lg text-xs font-medium transition-colors"
+                                      title="Attach diagram or image to this option (or Ctrl+V to paste)"
+                                    >
+                                      <ImageIcon className="w-3.5 h-3.5 text-maroon-500" />
+                                      <span className="hidden sm:inline">Add Image</span>
+                                    </label>
+                                  </div>
+                                )}
+
+                                {q.options.length > 2 && (
                                   <button
                                     type="button"
-                                    onClick={() => removeOptionImage(qIndex, oIndex)}
-                                    className="text-gray-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
-                                    title="Remove option image"
+                                    onClick={() => removeOption(qIndex, oIndex)}
+                                    className="text-gray-400 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-lg transition-colors ml-auto sm:ml-0"
+                                    title="Delete option"
                                   >
-                                    <X className="w-3.5 h-3.5" />
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
-                                </div>
-                              ) : (
-                                <div>
-                                  <input 
-                                    type="file" 
-                                    id={`opt-img-${qIndex}-${oIndex}`} 
-                                    accept="image/png, image/jpeg, image/webp" 
-                                    className="hidden" 
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0] || null;
-                                      if (file) updateOptionImage(qIndex, oIndex, file);
-                                      e.target.value = "";
-                                    }}
-                                  />
-                                  <label 
-                                    htmlFor={`opt-img-${qIndex}-${oIndex}`} 
-                                    className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-dashed border-maroon-300 hover:border-maroon-500 hover:bg-maroon-50 text-maroon-700 rounded-lg text-xs font-medium transition-colors"
-                                    title="Attach diagram or image to this option"
-                                  >
-                                    <ImageIcon className="w-3.5 h-3.5 text-maroon-500" />
-                                    <span className="hidden sm:inline">Add Image</span>
-                                  </label>
-                                </div>
-                              )}
-
-                              {q.options.length > 2 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeOption(qIndex, oIndex)}
-                                  className="text-gray-400 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-lg transition-colors ml-auto sm:ml-0"
-                                  title="Delete option"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
+                                )}
+                              </div>
                             </div>
+
+                            {/* Live Math Preview for Option */}
+                            {opt.text && opt.text.includes('$') && (
+                              <div className="px-2.5 py-1 bg-maroon-50/70 border border-maroon-200 rounded-lg text-xs text-gray-900 flex items-center gap-2">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-maroon-700 shrink-0">Preview:</span>
+                                <div className="flex-1 font-medium">
+                                  <MathText text={opt.text} />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

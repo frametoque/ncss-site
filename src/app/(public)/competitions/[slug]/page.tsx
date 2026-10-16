@@ -6,6 +6,7 @@ import { isCompetitionEnded, formatDateString } from "@/lib/utils";
 import pool from "@/lib/db";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { groupCategoriesBySubject } from "@/lib/quizSubjects";
 
 type Params = Promise<{ slug: string }>;
 
@@ -151,20 +152,23 @@ function CompetitionDetailsCard({
         )
       )}
 
-      {compItem.acceptingQuizAnswers && quizzes.length > 0 && (
-        <div className="space-y-3 mt-8 pt-6 border-t border-gray-100">
-          <p className="text-sm font-semibold text-maroon-700 uppercase tracking-wider text-center mb-2 flex items-center justify-center gap-2">
-            <Trophy className="h-4 w-4 shrink-0" /> Live Quizzes
-          </p>
-          {quizzes.map(quiz => (
-            <Button key={quiz.id} variant="outline" size="lg" className="w-full rounded-xl min-h-[3rem] sm:min-h-[3.5rem] h-auto py-3 px-4 text-base sm:text-lg border-maroon-200 text-maroon-800 hover:bg-maroon-50 whitespace-normal text-center" asChild>
-              <Link href={`/competitions/${slug}/quiz/${quiz.id}`}>
-                <span className="truncate">{quiz.name}</span> <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
-              </Link>
-            </Button>
-          ))}
-        </div>
-      )}
+      {compItem.acceptingQuizAnswers && quizzes.length > 0 && (() => {
+        const subjects = groupCategoriesBySubject(quizzes);
+        return (
+          <div className="space-y-3 mt-8 pt-6 border-t border-gray-100">
+            <p className="text-sm font-semibold text-maroon-700 uppercase tracking-wider text-center mb-2 flex items-center justify-center gap-2">
+              <Trophy className="h-4 w-4 shrink-0" /> Live Quizzes
+            </p>
+            {subjects.map(sub => (
+              <Button key={sub.subject} variant="outline" size="lg" className="w-full rounded-xl min-h-[3rem] sm:min-h-[3.5rem] h-auto py-3 px-4 text-base sm:text-lg border-maroon-200 text-maroon-800 hover:bg-maroon-50 whitespace-normal text-center shadow-xs cursor-pointer group" asChild>
+                <Link href={`/competitions/${slug}/quiz/${sub.categories[0].id}`}>
+                  <span className="truncate font-semibold">{sub.subject}</span> <ArrowRight className="ml-2 h-4 w-4 shrink-0 text-maroon-400 group-hover:text-maroon-700 group-hover:translate-x-0.5 transition-all" />
+                </Link>
+              </Button>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

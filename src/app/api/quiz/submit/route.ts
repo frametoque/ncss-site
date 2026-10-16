@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { cookies } from "next/headers";
 
+import { getSubjectName } from "@/lib/quizSubjects";
+
 // In-memory cache for questions during submission rush (60s TTL)
 interface CachedQuestions {
   data: Array<{ id: string; correctOption: string }>;
@@ -30,12 +32,15 @@ export async function POST(req: Request) {
 
     const [checkRes, catRes, questions] = await Promise.all([
       pool.query(`
-        SELECT qs.id 
-        FROM quiz_submission qs 
-        WHERE qs."categoryId" = $1 AND qs."schoolAccessId" = $2
+        SELECT qs.id, qc.name as "categoryName"
+        FROM quiz_submission qs
+        JOIN school_access sa ON qs."schoolAccessId" = sa.id
+        JOIN quiz_category qc ON qs."categoryId" = qc.id
+        WHERE LOWER(TRIM(sa."schoolName")) = (SELECT LOWER(TRIM(sa2."schoolName")) FROM school_access sa2 WHERE sa2.id = $2)
+          AND sa."competitionId" = (SELECT "competitionId" FROM quiz_category WHERE id = $1)
       `, [categoryId, schoolAccessId]),
       pool.query(`
-        SELECT c."acceptingQuizAnswers" 
+        SELECT c."acceptingQuizAnswers", qc.name
         FROM quiz_category qc
         JOIN competition c ON qc."competitionId" = c.id
         WHERE qc.id = $1
@@ -43,7 +48,13 @@ export async function POST(req: Request) {
       getCachedQuestions(categoryId)
     ]);
 
-    if (checkRes.rows.length > 0) {
+    const targetCategoryName = catRes.rows[0]?.name;
+    const targetSubject = targetCategoryName ? getSubjectName(targetCategoryName).toLowerCase() : "";
+    const alreadySubmitted = checkRes.rows.some(
+      r => getSubjectName(r.categoryName || "").toLowerCase() === targetSubject
+    );
+
+    if (alreadySubmitted) {
       return NextResponse.json({ error: "Already submitted" }, { status: 400 });
     }
 

@@ -1,89 +1,121 @@
-import { getQuizCategory, getQuizSubmissions, getQuizQuestions } from "../../actions";
+import pool from "@/lib/db";
 import Link from "next/link";
-import { CheckCircle2, XCircle, MinusCircle } from "lucide-react";
+import { notFound } from "next/navigation";
+import { getSubjectName, parseCategorySubject } from "@/lib/quizSubjects";
+import { QuizSubmissionsTable, SubmissionRow } from "@/components/admin/QuizSubmissionsTable";
+import { ArrowLeft, Trophy } from "lucide-react";
 
-export default async function SubmissionsPage({ params }: { params: Promise<{ id: string, categoryId: string }> }) {
+export default async function SubmissionsPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string, categoryId: string }> 
+}) {
   const { id, categoryId } = await params;
-  const category = await getQuizCategory(categoryId);
-  const submissions = await getQuizSubmissions(categoryId);
-  const questions = await getQuizQuestions(categoryId);
 
-  if (!category) {
-    return <div>Category not found</div>;
+  // 1. Fetch current category and competition info
+  const [catRes, compRes] = await Promise.all([
+    pool.query('SELECT * FROM quiz_category WHERE id = $1', [categoryId]),
+    pool.query('SELECT id, title FROM competition WHERE id = $1', [id])
+  ]);
+
+  if (catRes.rows.length === 0) {
+    notFound();
   }
 
-  const sortedSubmissions = [...submissions].sort((a, b) => {
+  const category = catRes.rows[0];
+  const competition = compRes.rows[0];
+  const subjectName = getSubjectName(category.name);
+
+  // 2. Fetch all categories belonging to this subject in this competition
+  const allCatsRes = await pool.query(
+    'SELECT * FROM quiz_category WHERE "competitionId" = $1 ORDER BY name ASC',
+    [id]
+  );
+  const subjectCategories = allCatsRes.rows.filter(
+    c => getSubjectName(c.name).toLowerCase() === subjectName.toLowerCase()
+  );
+  const subjectCategoryIds = subjectCategories.map(c => c.id);
+
+  // 3. Fetch all submissions for any medium in this subject
+  const subsRes = await pool.query(`
+    SELECT qs.*, sa."schoolName", qc.name as "categoryName"
+    FROM quiz_submission qs
+    JOIN school_access sa ON qs."schoolAccessId" = sa.id
+    JOIN quiz_category qc ON qs."categoryId" = qc.id
+    WHERE qs."categoryId" = ANY($1::text[])
+    ORDER BY qs."createdAt" DESC
+  `, [subjectCategoryIds]);
+
+  // 4. Fetch questions for all relevant categories
+  const questionsRes = await pool.query(
+    'SELECT id, "categoryId", "questionText", "correctOption", "orderIndex" FROM quiz_question WHERE "categoryId" = ANY($1::text[]) ORDER BY "orderIndex" ASC NULLS LAST, id ASC',
+    [subjectCategoryIds]
+  );
+
+  const questionsByCatId = new Map<string, any[]>();
+  for (const q of questionsRes.rows) {
+    if (!questionsByCatId.has(q.categoryId)) {
+      questionsByCatId.set(q.categoryId, []);
+    }
+    questionsByCatId.get(q.categoryId)!.push(q);
+  }
+
+  // 5. Build standardized SubmissionRow objects
+  const submissionRows: SubmissionRow[] = subsRes.rows.map(sub => {
+    const parsed = parseCategorySubject(sub.categoryName);
+    const medium = parsed.medium || sub.categoryName;
+    const catQuestions = questionsByCatId.get(sub.categoryId) || [];
+
+    return {
+      id: sub.id,
+      categoryId: sub.categoryId,
+      categoryName: sub.categoryName,
+      medium,
+      schoolName: sub.schoolName,
+      score: sub.score,
+      totalQuestions: catQuestions.length,
+      totalTimeLeft: sub.totalTimeLeft || 0,
+      createdAt: sub.createdAt,
+      answers: sub.answers || {},
+      questions: catQuestions
+    };
+  });
+
+  // Sort by score DESC, then totalTimeLeft DESC, then createdAt ASC
+  submissionRows.sort((a, b) => {
     if (a.score !== b.score) return b.score - a.score;
-    const timeA = a.totalTimeLeft || 0;
-    const timeB = b.totalTimeLeft || 0;
-    return timeB - timeA;
+    if (a.totalTimeLeft !== b.totalTimeLeft) return b.totalTimeLeft - a.totalTimeLeft;
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-maroon-900">Submissions: {category.name}</h1>
-        <Link href={`/admin/competitions/${id}/quizzes`} className="text-maroon-700/70 hover:text-maroon-800">Back to Quizzes</Link>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Link
+              href={`/admin/competitions/${id}/quizzes`}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-maroon-700/80 hover:text-maroon-800 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back to Quizzes
+            </Link>
+          </div>
+          <h1 className="text-3xl font-bold text-maroon-950 flex items-center gap-3">
+            <span>{subjectName} Submissions</span>
+          </h1>
+          <p className="text-xs text-gray-500 mt-1">
+            Combined results across all mediums ({subjectCategories.map(c => parseCategorySubject(c.name).medium || c.name).join(", ")})
+          </p>
+        </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl border border-maroon-100 shadow-sm overflow-hidden">
-        {sortedSubmissions.length === 0 ? (
-          <div className="text-center text-maroon-500 py-8">No submissions yet.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-maroon-100 bg-maroon-50/50">
-                  <th className="p-3 text-sm font-semibold text-maroon-900">Rank</th>
-                  <th className="p-3 text-sm font-semibold text-maroon-900">School Name</th>
-                  <th className="p-3 text-sm font-semibold text-maroon-900">Score</th>
-                  <th className="p-3 text-sm font-semibold text-maroon-900">Time Saved</th>
-                  <th className="p-3 text-sm font-semibold text-maroon-900">Submitted At</th>
-                  <th className="p-3 text-sm font-semibold text-maroon-900 min-w-[300px]">Answers</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedSubmissions.map((sub, index) => {
-                  let rankClass = "text-gray-500 font-medium";
-                  let rankText = `${index + 1}th`;
-                  if (index === 0) { rankClass = "text-amber-500 font-bold"; rankText = "1st"; }
-                  else if (index === 1) { rankClass = "text-slate-400 font-bold"; rankText = "2nd"; }
-                  else if (index === 2) { rankClass = "text-amber-700 font-bold"; rankText = "3rd"; }
-                  else if (index === 3) rankText = "4th";
-                  
-                  return (
-                    <tr key={sub.id} className="border-b border-maroon-50 hover:bg-maroon-50/20">
-                      <td className={`p-3 text-sm ${rankClass}`}>{rankText}</td>
-                      <td className="p-3 text-sm text-maroon-800 font-medium">{sub.schoolName}</td>
-                      <td className="p-3 text-sm text-maroon-800 font-bold">{sub.score} / {questions.length}</td>
-                      <td className="p-3 text-sm text-maroon-600 font-mono">{sub.totalTimeLeft || 0}s</td>
-                      <td className="p-3 text-sm text-maroon-600">{new Date(sub.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Colombo' })}</td>
-                      <td className="p-3 text-sm">
-                        <div className="flex flex-wrap gap-2">
-                          {questions.map((q, i) => {
-                            let isCorrect = false;
-                            let answered = false;
-                            if (sub.answers && sub.answers[q.id] !== undefined) {
-                              answered = true;
-                              isCorrect = sub.answers[q.id] === q.correctOption;
-                            }
-                            return (
-                              <div key={q.id} className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${isCorrect ? 'bg-green-50 border-green-200 text-green-700' : answered ? 'bg-red-50 border-red-200 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`} title={answered ? (isCorrect ? 'Correct' : 'Incorrect') : 'Unanswered'}>
-                                <span>Q{i + 1}</span>
-                                {isCorrect ? <CheckCircle2 className="w-3.5 h-3.5" /> : answered ? <XCircle className="w-3.5 h-3.5" /> : <MinusCircle className="w-3.5 h-3.5" />}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Submissions Table Component with Medium Filters, Search, Badges */}
+      <QuizSubmissionsTable
+        submissions={submissionRows}
+        subjectName={subjectName}
+      />
     </div>
   );
 }
