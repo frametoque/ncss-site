@@ -36,7 +36,7 @@ export default async function CompetitionsPage() {
               {/* Variable Image Thumbnail */}
               <Link href={`/competitions/${comp.slug}`} className={`block w-full bg-gray-100 rounded-xl mb-5 flex-shrink-0 flex items-center justify-center border border-gray-200 overflow-hidden relative group-hover:opacity-90 transition-opacity`}>
                 {comp.coverImage ? (
-                  <Image src={comp.coverImage} alt={comp.title} width={0} height={0} sizes="100vw" className="w-full h-auto object-cover transition-transform duration-500 hover:scale-105" />
+                  <Image src={comp.coverImage} alt={comp.title} width={600} height={600} sizes="100vw" className="w-full h-auto object-cover transition-transform duration-500 hover:scale-105" />
                 ) : (
                   <div className="w-full aspect-square flex items-center justify-center">
                     <span className="text-gray-400 font-medium text-sm">Cover Image</span>

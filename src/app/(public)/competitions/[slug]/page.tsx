@@ -160,13 +160,17 @@ function CompetitionDetailsCard({
             <p className="text-sm font-semibold text-maroon-700 uppercase tracking-wider text-center mb-2 flex items-center justify-center gap-2">
               <Trophy className="h-4 w-4 shrink-0" /> Live Quizzes
             </p>
-            {subjects.map(sub => (
-              <Button key={sub.subject} variant="outline" size="lg" className="w-full rounded-xl min-h-[3rem] sm:min-h-[3.5rem] h-auto py-3 px-4 text-base sm:text-lg border-maroon-200 text-maroon-800 hover:bg-maroon-50 whitespace-normal text-center shadow-xs cursor-pointer group" asChild>
-                <Link href={`/competitions/${slug}/quiz/${sub.categories[0].id}`}>
-                  <span className="truncate font-semibold">{sub.subject}</span> <ArrowRight className="ml-2 h-4 w-4 shrink-0 text-maroon-400 group-hover:text-maroon-700 group-hover:translate-x-0.5 transition-all" />
-                </Link>
-              </Button>
-            ))}
+            {subjects.map(sub => {
+              const firstCatId = sub.categories[0]?.id;
+              if (!firstCatId) return null;
+              return (
+                <Button key={sub.subject} variant="outline" size="lg" className="w-full rounded-xl min-h-[3rem] sm:min-h-[3.5rem] h-auto py-3 px-4 text-base sm:text-lg border-maroon-200 text-maroon-800 hover:bg-maroon-50 whitespace-normal text-center shadow-xs cursor-pointer group" asChild>
+                  <Link href={`/competitions/${slug}/quiz/${firstCatId}`}>
+                    <span className="truncate font-semibold">{sub.subject}</span> <ArrowRight className="ml-2 h-4 w-4 shrink-0 text-maroon-400 group-hover:text-maroon-700 group-hover:translate-x-0.5 transition-all" />
+                  </Link>
+                </Button>
+              );
+            })}
           </div>
         );
       })()}

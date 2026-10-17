@@ -7,6 +7,8 @@ import { SlideUp } from "@/components/animations/SlideUp";
 import { StaggerContainer, StaggerItem } from "@/components/animations/StaggerGroup";
 import { sanitizeHtml } from "@/lib/sanitize";
 
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "About Us",
   description: "Learn about the legacy and mission of the Nalanda College Science Society, and meet our executive board.",
@@ -197,11 +199,10 @@ export default async function AboutPage() {
                 <Image 
                   src={photo.photoUrl} 
                   alt="Archive Photo" 
-                  width={0} 
-                  height={0} 
+                  width={600} 
+                  height={450} 
                   sizes="(max-width: 768px) 50vw, 25vw"
-                  style={{ width: '100%', height: 'auto' }}
-                  className="transition-transform duration-700 group-hover:scale-110 block" 
+                  className="w-full h-auto transition-transform duration-700 group-hover:scale-110 block" 
                 />
               </SlideUp>
             ))}

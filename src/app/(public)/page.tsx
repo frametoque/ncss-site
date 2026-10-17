@@ -92,7 +92,7 @@ export default async function Home() {
                   <div className="bg-gray-100 w-full relative overflow-hidden">
                     <div className="absolute inset-0 bg-maroon-900/5 group-hover:bg-transparent transition-colors z-10" />
                     {comp.coverImage ? (
-                      <Image src={comp.coverImage} alt={comp.title} width={0} height={0} sizes="100vw" className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <Image src={comp.coverImage} alt={comp.title} width={600} height={600} sizes="100vw" className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
                       <div className="aspect-square flex items-center justify-center text-gray-400 font-medium">
                         Cover Image

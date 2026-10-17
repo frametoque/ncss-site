@@ -49,14 +49,18 @@ export default async function NewsDetailsPage({ params }: { params: Params }) {
           </h1>
           
           <div className="flex flex-wrap items-center gap-4 lg:gap-6 text-gray-500 text-sm mb-5 lg:mb-10 pb-5 lg:pb-10 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-               <Calendar className="h-4 w-4" />
-               <span>{new Date(newsItem.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span>{newsItem.author}</span>
-            </div>
+            {newsItem.createdAt && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>{new Date(newsItem.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+            )}
+            {newsItem.author && (
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span>{newsItem.author}</span>
+              </div>
+            )}
           </div>
 
           {/* Mobile Image (Hidden on Desktop) */}
