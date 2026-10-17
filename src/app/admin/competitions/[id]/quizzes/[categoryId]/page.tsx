@@ -1,20 +1,14 @@
-import { getQuizCategory, getQuizQuestions, updateQuizCategory, getQuizCategories, getSchoolAccesses } from "../actions";
+import { getQuizCategory, getQuizQuestions, updateQuizCategory } from "../actions";
 import Link from "next/link";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { QuizManager } from "@/components/admin/QuizManager";
-import { SchoolAccessManager } from "@/components/admin/SchoolAccessManager";
-import pool from "@/lib/db";
 
 export default async function CategoryPage({ params }: { params: Promise<{ id: string, categoryId: string }> }) {
   const { id, categoryId } = await params;
-  const [category, questions, allCategories, allAccesses, compRes] = await Promise.all([
+  const [category, questions] = await Promise.all([
     getQuizCategory(categoryId),
     getQuizQuestions(categoryId),
-    getQuizCategories(id),
-    getSchoolAccesses(id),
-    pool.query('SELECT title FROM "competition" WHERE id = $1', [id])
   ]);
-  const competitionTitle = compRes.rows[0]?.title || "Competition";
 
   if (!category) {
     return <div>Category not found</div>;
@@ -53,14 +47,6 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
       </div>
 
       <QuizManager category={category} initialQuestions={questions} />
-
-      <SchoolAccessManager 
-        competitionId={id} 
-        competitionTitle={competitionTitle}
-        categories={allCategories} 
-        initialAccesses={allAccesses} 
-        selectedCategoryId={categoryId} 
-      />
     </div>
   );
 }

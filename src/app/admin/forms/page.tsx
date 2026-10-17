@@ -24,7 +24,7 @@ export default async function FormsList() {
         </div>
         <Link 
           href="/admin/forms/new" 
-          className="bg-maroon-600 hover:bg-maroon-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm inline-flex items-center gap-2"
+          className="bg-maroon-800 hover:bg-maroon-900 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm inline-flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
           Create Form

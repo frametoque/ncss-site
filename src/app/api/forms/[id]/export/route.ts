@@ -1,10 +1,28 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { rewriteDataUrls } from '@/lib/storage';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Escapes CSV values and neutralizes CSV Formula Injection (CWE-1236).
+ * Prepend a single quote if the field starts with =, +, -, @, \t, or \r.
+ */
+function sanitizeCsvCell(value: any): string {
+  let str = String(value ?? "");
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
   const resolvedParams = await params;
   const id = resolvedParams.id;
   
@@ -33,19 +51,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const submissions = subRes.rows;
 
   // Build CSV
-  const headerRow = ["Date", "Submitter Email", ...fields.map(f => `"${f.displayLabel.replace(/"/g, '""')}"`)];
+  const headerRow = ["Date", "Submitter Email", ...fields.map(f => sanitizeCsvCell(f.displayLabel))];
   const rows = [headerRow.join(",")];
 
   for (const sub of submissions) {
     const rawData = typeof sub.data === 'string' ? JSON.parse(sub.data) : sub.data;
     const data = rewriteDataUrls(rawData);
     const row = [
-      `"${new Date(sub.createdAt).toISOString()}"`,
-      `"${String(sub.submitterEmail || '').replace(/"/g, '""')}"`,
+      sanitizeCsvCell(new Date(sub.createdAt).toISOString()),
+      sanitizeCsvCell(sub.submitterEmail || ''),
       ...fields.map(f => {
         let val = data[f.id] || '';
         if (Array.isArray(val)) val = val.join(', ');
-        return `"${String(val).replace(/"/g, '""')}"`;
+        return sanitizeCsvCell(val);
       })
     ];
     rows.push(row.join(","));
@@ -55,8 +73,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   return new NextResponse(csv, {
     headers: {
-      'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="${form.slug}-submissions.csv"`
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${form.slug}-submissions.csv"`,
+      'X-Content-Type-Options': 'nosniff'
     }
   });
 }

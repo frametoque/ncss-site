@@ -7,6 +7,7 @@ import pool from "@/lib/db";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { groupCategoriesBySubject } from "@/lib/quizSubjects";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 type Params = Promise<{ slug: string }>;
 
@@ -230,7 +231,7 @@ export default async function CompetitionDetailsPage({ params }: { params: Param
 
           <div
             className="prose prose-base sm:prose-lg prose-gray max-w-none prose-headings:font-heading prose-headings:font-bold prose-a:text-maroon-600 hover:prose-a:text-maroon-800 prose-ul:list-disc prose-li:marker:text-maroon-500 break-words overflow-hidden"
-            dangerouslySetInnerHTML={{ __html: compItem.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(compItem.content) }}
           />
         </div>
 

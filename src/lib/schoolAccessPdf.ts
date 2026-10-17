@@ -168,3 +168,113 @@ export function exportSubjectAccessCodesPdf({
   )}_Access_Codes.pdf`;
   doc.save(fileName);
 }
+
+export interface ExportMasterParams {
+  competitionTitle: string;
+  subjectGroups: SubjectGroup<CategoryItem>[];
+  schoolRows: Array<{
+    schoolName: string;
+    codes: Record<string, string>;
+  }>;
+}
+
+/**
+ * Export Master Overview PDF for all subjects (Landscape)
+ */
+export function exportMasterAccessCodesPdf({
+  competitionTitle,
+  subjectGroups,
+  schoolRows,
+}: ExportMasterParams) {
+  const doc = new jsPDF({
+    orientation: "landscape",
+    unit: "mm",
+    format: "a4",
+  });
+
+  drawHeader(
+    doc,
+    competitionTitle,
+    "Master School Quiz Access Codes (All Subjects)",
+    "landscape"
+  );
+  const startY = 24;
+
+  const headRow = ["#", "School Name", ...subjectGroups.map((g) => g.subject)];
+  const validRows = schoolRows.filter((row) => {
+    const sName = (row.schoolName || "").trim().toLowerCase();
+    return sName !== "" && !sName.includes("test");
+  });
+
+  const bodyRows = validRows.map((row, idx) => [
+    (idx + 1).toString(),
+    row.schoolName || "Unnamed School",
+    ...subjectGroups.map((g) =>
+      row.codes[g.subject] ? row.codes[g.subject].toUpperCase() : "-"
+    ),
+  ]);
+
+  const numSubjects = Math.max(subjectGroups.length, 1);
+  const remainingWidth = Math.max(269 - 12 - 75, 40);
+  const subjectColWidth = remainingWidth / numSubjects;
+
+  const columnStyles: Record<number, any> = {
+    0: { cellWidth: 12, halign: "center" },
+    1: { cellWidth: 75, fontStyle: "bold" },
+  };
+  subjectGroups.forEach((_, idx) => {
+    columnStyles[idx + 2] = {
+      cellWidth: subjectColWidth,
+      halign: "center",
+      fontStyle: "bold",
+      textColor: [77, 0, 0],
+      fontSize: 9,
+    };
+  });
+
+  autoTable(doc, {
+    startY: startY,
+    head: [headRow],
+    body: bodyRows,
+    margin: { left: 14, right: 14, top: 18, bottom: 14 },
+    theme: "grid",
+    headStyles: {
+      fillColor: [77, 0, 0],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 9,
+      halign: "center",
+      cellPadding: 3,
+    },
+    styles: {
+      fontSize: 8,
+      cellPadding: 2,
+      lineColor: [229, 231, 235],
+      lineWidth: 0.2,
+      valign: "middle",
+    },
+    alternateRowStyles: {
+      fillColor: [253, 248, 248],
+    },
+    columnStyles,
+    didDrawPage: () => {
+      if (doc.getCurrentPageInfo().pageNumber > 1) {
+        doc.setFillColor(77, 0, 0);
+        doc.rect(0, 0, 297, 4, "F");
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text(
+          `${competitionTitle} | Master School Access Codes`,
+          14,
+          10
+        );
+      }
+    },
+  });
+
+  drawFooter(doc, "landscape");
+
+  const fileName = `${sanitizeFilename(competitionTitle)}_Master_Access_Codes.pdf`;
+  doc.save(fileName);
+}
+

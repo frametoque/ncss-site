@@ -53,8 +53,10 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-maroon-900">Manage Quizzes</h1>
-        <Link href={`/admin/competitions/${id}`} className="text-maroon-700/70 hover:text-maroon-800">Back to Competition</Link>
+        <h1 className="text-2xl sm:text-3xl font-bold text-maroon-900">
+          {competitionTitle} | Manage Quizzes
+        </h1>
+        <Link href={`/admin/competitions/${id}`} className="text-maroon-700/70 hover:text-maroon-800 text-sm font-medium">Back to Competition</Link>
       </div>
 
       {/* Top Inline Section: Quiz Status & Add New Subject */}

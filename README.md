@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nalanda College Science Society (NCSS) Web Platform
 
-## Getting Started
+The official web portal for the Nalanda College Science Society (Colombo 10, Sri Lanka), featuring dynamic event management, annual science publications, competitive quiz platforms, school registration forms, and an administrative CMS.
 
-First, run the development server:
+---
 
+## Architecture & Tech Stack
+
+* **Framework:** Next.js 16.3.4 (App Router)
+* **Frontend:** React 19, TypeScript 5, Tailwind CSS v4, Framer Motion
+* **Database:** PostgreSQL on Neon Serverless (`@neondatabase/serverless`)
+* **Storage:** Cloudflare R2 via AWS S3 SDK (`@aws-sdk/client-s3`)
+* **Authentication:** Custom JWT sessions (`jose` HS256) with secure HTTP-only cookies
+* **Rich Content:** KaTeX mathematical formula rendering, Prism code syntax highlighting, and jsPDF export engines
+
+---
+
+## Environment Configuration
+
+Copy the example environment template:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ensure the following variables are configured in `.env` (or in your hosting provider's environment settings):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+# PostgreSQL Database Connection
+DATABASE_URL="postgresql://user:password@ep-sample-pooler.region.aws.neon.tech/neondb?sslmode=require"
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# JWT Secret for Admin Sessions (32+ character random string)
+# Generate with: openssl rand -base64 32
+JWT_SECRET="your-strong-random-jwt-secret-at-least-32-chars"
 
-## Learn More
+# Cloudflare R2 Storage Bucket
+R2_ACCOUNT_ID="your_cloudflare_account_id"
+R2_ACCESS_KEY_ID="your_r2_access_key_id"
+R2_SECRET_ACCESS_KEY="your_r2_secret_access_key"
+R2_BUCKET_NAME="ncss-site"
+R2_PUBLIC_URL="https://pub-xxxxxx.r2.dev"
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Install dependencies:
+```bash
+npm install
+```
 
-## Deploy on Vercel
+Start the local development server:
+```bash
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Quality Gates & Verification
+
+Run TypeScript compilation check:
+```bash
+npx tsc --noEmit
+```
+
+Run ESLint analysis:
+```bash
+npm run lint
+```
+
+Build for production:
+```bash
+npm run build
+```
+
+---
+
+## Production Deployment
+
+### 1. Vercel (Recommended)
+This repository includes a CI workflow in `.github/workflows/deploy.yml` that builds and deploys automatically on push to `main`:
+1. Connect the repository in the Vercel dashboard.
+2. Configure all environment variables in **Project Settings > Environment Variables**.
+3. Deployments build with `npm run build` and serve via Next.js serverless functions.
+
+### 2. Standalone Node.js Runner (cPanel / VPS)
+For traditional hosting environments with Node.js support:
+1. Run `npm run build`.
+2. Start the production listener:
+```bash
+node app.js
+```
+The server binds to `process.env.PORT` (defaults to `3000`).
+
+---
+
+## Health Check & Monitoring
+
+A dedicated health check endpoint is available at:
+```http
+GET /api/health
+```
+
+Returns:
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-10-17T22:50:00.000Z",
+  "database": "connected",
+  "latencyMs": 42,
+  "uptimeSeconds": 1420
+}
+```
+If the database connection is interrupted, the endpoint returns HTTP `503 Service Unavailable` with `"status": "degraded"`.

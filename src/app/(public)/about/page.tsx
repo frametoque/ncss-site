@@ -5,6 +5,7 @@ import pool from "@/lib/db";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { SlideUp } from "@/components/animations/SlideUp";
 import { StaggerContainer, StaggerItem } from "@/components/animations/StaggerGroup";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -70,7 +71,7 @@ export default async function AboutPage() {
               <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{visionTitle}</h2>
               <div 
                 className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words max-w-none [&_p]:mb-4 [&_p:last-child]:mb-0"
-                dangerouslySetInnerHTML={{ __html: visionContent }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(visionContent) }}
               />
             </div>
             
@@ -79,7 +80,7 @@ export default async function AboutPage() {
               <h2 className="text-2xl font-bold font-heading text-gray-900 mb-4">{missionTitle}</h2>
               <div 
                 className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words max-w-none [&_p]:mb-4 [&_p:last-child]:mb-0"
-                dangerouslySetInnerHTML={{ __html: missionContent }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(missionContent) }}
               />
             </div>
           </div>
@@ -91,7 +92,7 @@ export default async function AboutPage() {
             <h2 className="text-3xl font-bold font-heading text-gray-900 mb-6">{historyTitle}</h2>
             <div 
               className="text-gray-700 whitespace-pre-wrap break-words max-w-none [&_p]:mb-4 [&_p:last-child]:mb-0"
-              dangerouslySetInnerHTML={{ __html: historyContent }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(historyContent) }}
             />
           </SlideUp>
           <div className="min-w-0">
@@ -144,7 +145,7 @@ export default async function AboutPage() {
               <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4 truncate">{magTitle}</h2>
               <div 
                 className="text-maroon-100 mb-6 text-lg max-w-none break-words [&_p:empty]:min-h-[1.5em] [&_p:has(br)]:min-h-[1.5em]"
-                dangerouslySetInnerHTML={{ __html: magContent }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(magContent) }}
               />
             </StaggerItem>
             <StaggerItem className="w-48 h-48 md:w-64 md:h-64 bg-maroon-950 rounded-2xl shrink-0 flex items-center justify-center border-4 border-maroon-800 relative z-10 shadow-2xl overflow-hidden transition-transform duration-500 hover:scale-105">

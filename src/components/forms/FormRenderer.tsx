@@ -5,6 +5,7 @@ import { submitPublicForm } from "@/app/form-submit-action";
 import { Upload, X, File as FileIcon, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 import { upload } from "@/lib/upload-client";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -143,7 +144,7 @@ export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
           <div className="bg-maroon-50 p-6 md:p-8 rounded-xl shadow-sm border border-maroon-100 text-maroon-900">
             <div 
               className="prose prose-maroon max-w-none"
-              dangerouslySetInnerHTML={{ __html: form.successMessage }} 
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.successMessage) }} 
             />
           </div>
         ) : (
@@ -374,7 +375,7 @@ export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full md:w-auto px-8 py-3 bg-maroon-600 hover:bg-maroon-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm ml-auto"
+              className="w-full md:w-auto px-8 py-3 bg-maroon-800 hover:bg-maroon-900 text-white rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm ml-auto"
             >
               {isSubmitting ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : "Submitting...") : "Submit"}
             </button>
@@ -382,7 +383,7 @@ export function FormRenderer({ form, fields }: { form: any, fields: any[] }) {
             <button 
               type="button" 
               onClick={handleNext}
-              className="w-full md:w-auto px-8 py-3 bg-maroon-600 hover:bg-maroon-700 text-white rounded-xl font-bold transition-colors shadow-sm ml-auto"
+              className="w-full md:w-auto px-8 py-3 bg-maroon-800 hover:bg-maroon-900 text-white rounded-xl font-bold transition-colors shadow-sm ml-auto"
             >
               Next Step
             </button>

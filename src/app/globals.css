@@ -193,3 +193,44 @@ img {
   color: #569cd6 !important;
 }
 
+/* Sinhala Unicode typography */
+.font-sinhala {
+  font-family: 'Noto Sans Sinhala', 'Iskoola Pota', 'Segoe UI Historic', 'Apple Sinhala', var(--font-sans), sans-serif;
+  line-height: 1.6;
+}
+
+/* Print-specific styling */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 12mm 10mm;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-page-break-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-page-break-before {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+

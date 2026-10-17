@@ -17,8 +17,8 @@ interface FlipbookProps {
 
 export default function Flipbook({ pdfUrl }: FlipbookProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [windowWidth, setWindowWidth] = useState(1000);
-  const [windowHeight, setWindowHeight] = useState(800);
+  const [windowWidth, setWindowWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1000));
+  const [windowHeight, setWindowHeight] = useState(() => (typeof window !== "undefined" ? window.innerHeight : 800));
 
   const pdfOptions = React.useMemo(() => ({
     cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
@@ -36,8 +36,6 @@ export default function Flipbook({ pdfUrl }: FlipbookProps) {
     audio.preload = 'auto';
     audioRef.current = audio;
 
-    setWindowWidth(window.innerWidth);
-    setWindowHeight(window.innerHeight);
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
       setWindowHeight(window.innerHeight);

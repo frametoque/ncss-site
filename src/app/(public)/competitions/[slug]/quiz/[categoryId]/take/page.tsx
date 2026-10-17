@@ -22,7 +22,7 @@ export default async function TakeQuizPage({
   if (!accessCode) redirect(`/competitions/${slug}/quiz/${categoryId}`);
 
   // 1. Try exact match on current category
-  let accessRes = await pool.query(`
+  const accessRes = await pool.query(`
     SELECT sa.* 
     FROM school_access sa 
     WHERE (

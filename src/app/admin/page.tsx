@@ -69,11 +69,11 @@ export default async function AdminDashboard() {
                   <p className="text-sm font-medium text-maroon-700/70">{card.title}</p>
                   <p className="text-3xl font-bold text-maroon-900 mt-2">{card.count}</p>
                 </div>
-                <div className="p-4 rounded-full text-white bg-maroon-600 group-hover:bg-maroon-700 transition-colors">
+                <div className="p-4 rounded-full text-white bg-maroon-800 group-hover:bg-maroon-900 transition-colors">
                   <card.icon className="w-6 h-6" />
                 </div>
               </div>
-              <div className="mt-4 flex items-center text-sm font-medium text-maroon-600 group-hover:text-maroon-800">
+              <div className="mt-4 flex items-center text-sm font-medium text-maroon-800 group-hover:text-maroon-950">
                 Manage <ArrowRight className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" />
               </div>
             </div>

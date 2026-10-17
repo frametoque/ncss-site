@@ -1,5 +1,9 @@
-export default {
+import typography from '@tailwindcss/typography';
+
+const config = {
   plugins: [
-    require('@tailwindcss/typography')
+    typography
   ]
-}
+};
+
+export default config;

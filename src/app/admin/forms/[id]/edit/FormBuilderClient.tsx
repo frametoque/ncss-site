@@ -442,7 +442,7 @@ export default function FormBuilderClient({ form, initialFields, competitions }:
         <button 
           onClick={handleSave} 
           disabled={isSaving}
-          className="w-full bg-maroon-600 hover:bg-maroon-700 disabled:opacity-50 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2 transition-colors shadow-sm"
+          className="w-full bg-maroon-800 hover:bg-maroon-900 disabled:opacity-50 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2 transition-colors shadow-sm"
         >
           {isSaving ? "Saving..." : <><Save className="w-5 h-5" /> Save Changes</>}
         </button>

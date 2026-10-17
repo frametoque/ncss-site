@@ -587,6 +587,8 @@ export function QuizTaker({
                             <img
                               src={opt.image}
                               alt={`Option ${letter}`}
+                              loading="lazy"
+                              decoding="async"
                               className="max-h-[150px] sm:max-h-[170px] w-auto max-w-full object-contain pointer-events-none select-none"
                               draggable={false}
                             />
@@ -648,6 +650,8 @@ export function QuizTaker({
                           <img 
                             src={currentQ.image} 
                             alt="Question figure" 
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full max-h-[240px] lg:max-h-[420px] object-contain pointer-events-none select-none" 
                             draggable={false}
                           />
@@ -752,6 +756,7 @@ export function QuizTaker({
               <img
                 src={zoomedImage.url}
                 alt={zoomedImage.title}
+                decoding="async"
                 className="max-h-[70vh] w-auto max-w-full object-contain pointer-events-none select-none"
                 draggable={false}
               />

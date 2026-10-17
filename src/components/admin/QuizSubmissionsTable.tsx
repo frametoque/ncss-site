@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { CheckCircle2, XCircle, MinusCircle, Download, Search, FileText, Loader2 } from "lucide-react";
-import { exportQuizSubmissionsPdf, formatMediumLabel } from "@/lib/quizSubmissionsPdf";
+import { CheckCircle2, XCircle, MinusCircle, Download, Search, FileText } from "lucide-react";
+import { formatMediumLabel } from "@/lib/quizSubmissionsPdf";
+import QuizPdfExportModal from "@/components/admin/QuizPdfExportModal";
 
 export interface SubmissionRow {
   id: string;
@@ -35,7 +36,6 @@ export function QuizSubmissionsTable({
 }: QuizSubmissionsTableProps) {
   const [selectedMedium, setSelectedMedium] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
   // Extract unique mediums
   const availableMediums = useMemo(() => {
@@ -72,28 +72,10 @@ export function QuizSubmissionsTable({
     });
   }, [overallRankedSubmissions, selectedMedium, searchQuery]);
 
-  function handleExportPdf() {
-    setIsExportingPdf(true);
-    setTimeout(() => {
-      try {
-        // exportQuizSubmissionsPdf guarantees test users are strictly excluded
-        const result = exportQuizSubmissionsPdf({
-          competitionTitle,
-          subjectName,
-          mediumFilter: selectedMedium,
-          submissions: filteredSubmissions,
-        });
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
-        if (!result.success) {
-          alert(result.error || "Failed to export PDF.");
-        }
-      } catch (err: any) {
-        console.error("PDF export error:", err);
-        alert(`Failed to export PDF: ${err?.message || "Unknown error"}`);
-      } finally {
-        setIsExportingPdf(false);
-      }
-    }, 50);
+  function handleOpenPdfModal() {
+    setIsPdfModalOpen(true);
   }
 
   function exportCSV() {
@@ -199,16 +181,12 @@ export function QuizSubmissionsTable({
           {/* Export PDF Button (Always Excludes TEST users) */}
           <button
             type="button"
-            onClick={handleExportPdf}
-            disabled={isExportingPdf || filteredSubmissions.length === 0}
+            onClick={handleOpenPdfModal}
+            disabled={filteredSubmissions.length === 0}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-maroon-800 text-white hover:bg-maroon-900 border border-maroon-900 rounded-lg text-xs font-bold cursor-pointer disabled:opacity-50 transition-all whitespace-nowrap shadow-xs hover:shadow-sm"
             title="Export quiz submissions as branded PDF (Excludes TEST users)"
           >
-            {isExportingPdf ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <FileText className="w-3.5 h-3.5" />
-            )}
+            <FileText className="w-3.5 h-3.5 text-white" />
             <span>Export PDF</span>
           </button>
 
@@ -339,6 +317,16 @@ export function QuizSubmissionsTable({
           </div>
         )}
       </div>
+
+      {/* PDF Export Options Modal */}
+      <QuizPdfExportModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        competitionTitle={competitionTitle}
+        subjectName={subjectName}
+        mediumFilter={selectedMedium}
+        submissions={filteredSubmissions}
+      />
     </div>
   );
 }

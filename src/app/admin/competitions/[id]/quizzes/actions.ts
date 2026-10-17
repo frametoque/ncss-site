@@ -3,13 +3,16 @@
 import pool from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { groupCategoriesBySubject, parseCategorySubject, getSubjectName } from "@/lib/quizSubjects";
+import { requireAdminSession } from "@/lib/auth";
 
 export async function getQuizCategories(competitionId: string) {
+  await requireAdminSession();
   const res = await pool.query('SELECT * FROM quiz_category WHERE "competitionId" = $1 ORDER BY name', [competitionId]);
   return res.rows;
 }
 
 export async function createQuizCategory(competitionId: string, name: string, totalTime: number | null, questionTimer: number | null = 60) {
+  await requireAdminSession();
   const insertRes = await pool.query(
     'INSERT INTO quiz_category ("competitionId", name, "totalTime", "questionTimer") VALUES ($1, $2, $3, $4) RETURNING id', 
     [competitionId, name.trim(), totalTime, questionTimer]
@@ -48,16 +51,19 @@ export async function createQuizCategory(competitionId: string, name: string, to
 }
 
 export async function addMediumToSubject(competitionId: string, subjectName: string, mediumName: string, questionTimer: number = 60) {
+  await requireAdminSession();
   const fullName = `${subjectName.trim()} - ${mediumName.trim()}`;
   return await createQuizCategory(competitionId, fullName, null, questionTimer);
 }
 
 export async function getQuizCategory(categoryId: string) {
+  await requireAdminSession();
   const res = await pool.query('SELECT * FROM quiz_category WHERE id = $1', [categoryId]);
   return res.rows[0];
 }
 
 export async function updateQuizCategory(categoryId: string, name: string, totalTime: number | null, questionTimer: number | null = null) {
+  await requireAdminSession();
   await pool.query(
     'UPDATE quiz_category SET name = $1, "totalTime" = $2, "questionTimer" = $3 WHERE id = $4',
     [name, totalTime, questionTimer, categoryId]
@@ -66,6 +72,7 @@ export async function updateQuizCategory(categoryId: string, name: string, total
 }
 
 export async function deleteQuizCategory(competitionId: string, categoryId: string) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -85,6 +92,7 @@ export async function deleteQuizCategory(competitionId: string, categoryId: stri
 }
 
 export async function deleteSubject(competitionId: string, categoryIds: string[]) {
+  await requireAdminSession();
   if (!categoryIds || categoryIds.length === 0) return { success: true };
   const client = await pool.connect();
   try {
@@ -104,30 +112,36 @@ export async function deleteSubject(competitionId: string, categoryIds: string[]
   }
 }
 
+let hasEnsuredQuestionColumns = false;
+async function ensureQuestionColumns() {
+  if (hasEnsuredQuestionColumns) return;
+  try {
+    await pool.query(`
+      ALTER TABLE quiz_question 
+      ADD COLUMN IF NOT EXISTS code text, 
+      ADD COLUMN IF NOT EXISTS "codeLanguage" text,
+      ADD COLUMN IF NOT EXISTS "orderIndex" integer
+    `);
+    hasEnsuredQuestionColumns = true;
+  } catch {
+    // Continue if migration check fails
+  }
+}
+
 export async function getQuizQuestions(categoryId: string) {
-  // Ensure table has the latest columns
-  await pool.query(`
-    ALTER TABLE quiz_question 
-    ADD COLUMN IF NOT EXISTS code text, 
-    ADD COLUMN IF NOT EXISTS "codeLanguage" text,
-    ADD COLUMN IF NOT EXISTS "orderIndex" integer
-  `).catch(() => {});
+  await requireAdminSession();
+  await ensureQuestionColumns();
 
   const res = await pool.query('SELECT * FROM quiz_question WHERE "categoryId" = $1 ORDER BY "orderIndex" ASC NULLS LAST, id ASC', [categoryId]);
   return res.rows;
 }
 
 export async function saveQuizQuestions(categoryId: string, questions: any[]) {
+  await requireAdminSession();
+  await ensureQuestionColumns();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-
-    await client.query(`
-      ALTER TABLE quiz_question 
-      ADD COLUMN IF NOT EXISTS code text, 
-      ADD COLUMN IF NOT EXISTS "codeLanguage" text,
-      ADD COLUMN IF NOT EXISTS "orderIndex" integer
-    `).catch(() => {});
     
     const qIds = questions.map(q => q.id).filter(Boolean);
     if (qIds.length > 0) {
@@ -162,16 +176,19 @@ export async function saveQuizQuestions(categoryId: string, questions: any[]) {
 }
 
 export async function getSchoolAccesses(competitionId: string) {
+  await requireAdminSession();
   const res = await pool.query('SELECT * FROM school_access WHERE "competitionId" = $1 ORDER BY "schoolName" ASC', [competitionId]);
   return res.rows;
 }
 
 export async function getSchoolAccessesByCategory(categoryId: string) {
+  await requireAdminSession();
   const res = await pool.query('SELECT * FROM school_access WHERE "categoryId" = $1 ORDER BY "schoolName" ASC', [categoryId]);
   return res.rows;
 }
 
 export async function saveSchoolAccesses(competitionId: string, accesses: any[], categoryId?: string | null) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -310,6 +327,7 @@ export async function saveSchoolAccesses(competitionId: string, accesses: any[],
 }
 
 export async function deleteSchoolFromAllCategories(competitionId: string, schoolName: string) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -344,6 +362,7 @@ export async function deleteSchoolFromAllCategories(competitionId: string, schoo
 }
 
 export async function getQuizSubmissions(categoryId: string) {
+  await requireAdminSession();
   const res = await pool.query(`
     SELECT qs.*, sa."schoolName" 
     FROM quiz_submission qs 
@@ -355,6 +374,7 @@ export async function getQuizSubmissions(categoryId: string) {
 }
 
 export async function importSchoolsFromForm(competitionId: string, formId: string) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -466,6 +486,7 @@ export interface RegisteredSchoolCandidate {
 }
 
 export async function getFormSchoolCandidates(competitionId: string, formId: string): Promise<RegisteredSchoolCandidate[]> {
+  await requireAdminSession();
   const fieldsRes = await pool.query(
     'SELECT id, label FROM "formField" WHERE "formId" = $1 ORDER BY "orderIndex" ASC',
     [formId]
@@ -529,6 +550,7 @@ export async function getFormSchoolCandidates(competitionId: string, formId: str
 }
 
 export async function importSelectedSchools(competitionId: string, schoolNames: string[]) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -617,6 +639,7 @@ export async function importSelectedSchools(competitionId: string, schoolNames: 
  * while ensuring distinct subjects still have distinct codes.
  */
 export async function unifySchoolAccessCodesBySubject(competitionId: string) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -724,6 +747,7 @@ export async function unifySchoolAccessCodesBySubject(competitionId: string) {
 }
 
 export async function getSubjectQuizSubmissionsForPdf(categoryIds: string[]) {
+  await requireAdminSession();
   if (!categoryIds || categoryIds.length === 0) return [];
   const [subsRes, questionsRes] = await Promise.all([
     pool.query(`
@@ -757,6 +781,109 @@ export async function getSubjectQuizSubmissionsForPdf(categoryIds: string[]) {
       createdAt: sub.createdAt ? new Date(sub.createdAt).toISOString() : new Date().toISOString()
     };
   });
+}
+
+export interface MarksheetQuestion {
+  id: string;
+  categoryId: string;
+  questionText: string;
+  image?: string | null;
+  options: Array<{
+    text?: string;
+    image?: string | null;
+  } | string>;
+  correctOption: string;
+  code?: string | null;
+  codeLanguage?: string | null;
+  orderIndex?: number | null;
+}
+
+export interface SubjectMarksheetData {
+  competitionTitle: string;
+  subject: string;
+  categories: Array<{
+    id: string;
+    name: string;
+    medium: string | null;
+    questionTimer?: number | null;
+    questions: MarksheetQuestion[];
+  }>;
+}
+
+export async function getSubjectMarksheetData(
+  competitionId: string,
+  categoryIds: string[]
+): Promise<SubjectMarksheetData> {
+  await requireAdminSession();
+  if (!categoryIds || categoryIds.length === 0) {
+    return {
+      competitionTitle: "Competition",
+      subject: "",
+      categories: [],
+    };
+  }
+
+  const [categoriesRes, questionsRes, compRes] = await Promise.all([
+    pool.query(
+      `SELECT id, name, "questionTimer" FROM quiz_category WHERE id = ANY($1::text[])`,
+      [categoryIds]
+    ),
+    pool.query(
+      `SELECT id, "categoryId", "questionText", image, options, "correctOption", code, "codeLanguage", "orderIndex"
+       FROM quiz_question
+       WHERE "categoryId" = ANY($1::text[])
+       ORDER BY "orderIndex" ASC NULLS LAST, id ASC`,
+      [categoryIds]
+    ),
+    pool.query(`SELECT id, title FROM competition WHERE id = $1`, [competitionId]),
+  ]);
+
+  const questionsByCatId: Record<string, MarksheetQuestion[]> = {};
+  for (const catId of categoryIds) {
+    questionsByCatId[catId] = [];
+  }
+
+  for (const q of questionsRes.rows) {
+    let parsedOptions: any[] = [];
+    if (typeof q.options === "string") {
+      try {
+        parsedOptions = JSON.parse(q.options);
+      } catch {
+        parsedOptions = [];
+      }
+    } else if (Array.isArray(q.options)) {
+      parsedOptions = q.options;
+    }
+
+    if (!questionsByCatId[q.categoryId]) {
+      questionsByCatId[q.categoryId] = [];
+    }
+    questionsByCatId[q.categoryId].push({
+      ...q,
+      options: parsedOptions,
+    });
+  }
+
+  let determinedSubject = "";
+  const categoriesWithQuestions = categoriesRes.rows.map((cat) => {
+    const parsed = parseCategorySubject(cat.name);
+    if (!determinedSubject && parsed.subject) {
+      determinedSubject = parsed.subject;
+    }
+    return {
+      id: cat.id,
+      name: cat.name,
+      medium: parsed.medium || cat.name,
+      questionTimer: cat.questionTimer,
+      questions: questionsByCatId[cat.id] || [],
+    };
+  });
+
+  return {
+    competitionTitle: compRes.rows[0]?.title || "Competition",
+    subject: determinedSubject || "Subject",
+    categories: categoriesWithQuestions,
+  };
 }
 
 

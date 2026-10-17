@@ -15,7 +15,8 @@ import {
   SubjectGroup 
 } from "@/lib/quizSubjects";
 import { 
-  exportSubjectAccessCodesPdf 
+  exportSubjectAccessCodesPdf,
+  exportMasterAccessCodesPdf
 } from "@/lib/schoolAccessPdf";
 import { useRouter } from "next/navigation";
 import { 
@@ -29,7 +30,9 @@ import {
   X,
   FileDown,
   FileText,
-  ChevronDown
+  ChevronDown,
+  Search,
+  Save
 } from "lucide-react";
 
 interface Category {
@@ -43,12 +46,6 @@ interface SchoolAccess {
   categoryId: string | null;
   schoolName: string;
   accessCode: string;
-}
-
-interface SchoolSubjectRow {
-  schoolName: string;
-  accessCode: string;
-  accessIds: (string | undefined)[];
 }
 
 export function SchoolAccessManager({ 
@@ -72,17 +69,6 @@ export function SchoolAccessManager({
     return groupCategoriesBySubject(categories);
   }, [categories]);
 
-  // If a specific categoryId was passed (e.g. from category edit page), map to its subject
-  const defaultTab = useMemo(() => {
-    if (selectedCategoryId) {
-      const match = subjectGroups.find(g => g.categoryIds.includes(selectedCategoryId));
-      return match ? match.subject : "overview";
-    }
-    return "overview";
-  }, [selectedCategoryId, subjectGroups]);
-
-  const [activeTab, setActiveTab] = useState<string>(defaultTab);
-
   const [accesses, setAccesses] = useState<SchoolAccess[]>(() => {
     return initialAccesses.map(a => ({
       ...a,
@@ -100,12 +86,14 @@ export function SchoolAccessManager({
   }, [initialAccesses, categories]);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isAddingToAll, setIsAddingToAll] = useState(false);
   const [deletingSchoolName, setDeletingSchoolName] = useState<string | null>(null);
   const [copiedSubject, setCopiedSubject] = useState(false);
   const [newSchoolNameModal, setNewSchoolNameModal] = useState("");
   const [showAddToAllModal, setShowAddToAllModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Modal for Sync from Registrations
   const [showSyncModal, setShowSyncModal] = useState(false);
@@ -184,62 +172,19 @@ export function SchoolAccessManager({
     return errors;
   }, [accesses, categories]);
 
-  // Active Subject Group
-  const activeSubjectGroup = useMemo(() => {
-    if (activeTab === "overview") return null;
-    return subjectGroups.find(g => g.subject.toLowerCase() === activeTab.toLowerCase()) || null;
-  }, [activeTab, subjectGroups]);
-
-  // Aggregate rows for the active subject group (one row per school)
-  const activeSubjectSchoolRows = useMemo((): SchoolSubjectRow[] => {
-    if (!activeSubjectGroup) return [];
-    const catIds = new Set(activeSubjectGroup.categoryIds);
-    const map = new Map<string, { schoolName: string; accessCode: string; accessIds: (string | undefined)[] }>();
-
-    for (const a of accesses) {
-      if (a.categoryId && catIds.has(a.categoryId)) {
-        const sName = a.schoolName?.trim();
-        if (!sName) continue;
-        const key = sName.toLowerCase();
-        if (!map.has(key)) {
-          map.set(key, {
-            schoolName: sName,
-            accessCode: a.accessCode?.trim().toUpperCase() || "",
-            accessIds: [a.id]
-          });
-        } else {
-          const entry = map.get(key)!;
-          if (a.id) entry.accessIds.push(a.id);
-          // If code was missing in first row, populate it
-          if (!entry.accessCode && a.accessCode) {
-            entry.accessCode = a.accessCode.trim().toUpperCase();
-          }
-        }
-      }
-    }
-
-    return Array.from(map.values()).sort((a, b) => a.schoolName.localeCompare(b.schoolName));
-  }, [activeSubjectGroup, accesses]);
-
-  // Update a school's code for the active subject (applies across all mediums of this subject)
-  const updateSchoolSubjectCode = (schoolName: string, newCode: string) => {
-    if (!activeSubjectGroup) return;
-    const catIds = activeSubjectGroup.categoryIds;
-    const upperCode = newCode.toUpperCase();
+  // Update a school's code for a specific subject (applies across all mediums/categories of this subject)
+  const updateSchoolSubjectCode = (schoolName: string, catIds: string[], newCode: string) => {
+    const upperCode = newCode.toUpperCase().trim();
     const schoolLower = schoolName.trim().toLowerCase();
 
     setAccesses(prev => {
-      // 1. Update existing matching entries for this school & subject categories
-      let updatedAny = false;
       const next = prev.map(a => {
         if (a.categoryId && catIds.includes(a.categoryId) && a.schoolName?.trim().toLowerCase() === schoolLower) {
-          updatedAny = true;
           return { ...a, accessCode: upperCode };
         }
         return a;
       });
 
-      // 2. If any category in this subject didn't have an entry for this school, add it
       const existingInSubject = next.filter(
         a => a.categoryId && catIds.includes(a.categoryId) && a.schoolName?.trim().toLowerCase() === schoolLower
       );
@@ -258,40 +203,14 @@ export function SchoolAccessManager({
 
       return next;
     });
+    setHasUnsavedChanges(true);
   };
 
-  // Regenerate a school's code for the active subject
-  const regenerateSchoolSubjectCode = (schoolName: string) => {
+  // Regenerate a school's code for a specific subject
+  const regenerateSchoolSubjectCode = (schoolName: string, catIds: string[]) => {
     const existingCodes = new Set(allCodesSet);
     const newCode = generateUniqueCode(existingCodes);
-    updateSchoolSubjectCode(schoolName, newCode);
-  };
-
-  // Add a new school to the active subject (adds across all mediums of this subject)
-  const addSchoolToCurrentSubject = () => {
-    if (!activeSubjectGroup) return;
-    const existingCodes = new Set(allCodesSet);
-    const newCode = generateUniqueCode(existingCodes);
-
-    const newEntries: SchoolAccess[] = activeSubjectGroup.categoryIds.map(catId => ({
-      competitionId,
-      categoryId: catId,
-      schoolName: "",
-      accessCode: newCode
-    }));
-
-    setAccesses(prev => [...prev, ...newEntries]);
-  };
-
-  // Remove a school completely from the active subject
-  const removeSchoolFromCurrentSubject = (schoolName: string) => {
-    if (!activeSubjectGroup) return;
-    const catIds = new Set(activeSubjectGroup.categoryIds);
-    const schoolLower = schoolName.trim().toLowerCase();
-
-    setAccesses(prev =>
-      prev.filter(a => !(a.categoryId && catIds.has(a.categoryId) && a.schoolName?.trim().toLowerCase() === schoolLower))
-    );
+    updateSchoolSubjectCode(schoolName, catIds, newCode);
   };
 
   // Add school to ALL subjects with distinct unique codes across subjects (and shared within mediums)
@@ -302,9 +221,9 @@ export function SchoolAccessManager({
     setIsAddingToAll(true);
     try {
       await importSelectedSchools(competitionId, [trimmed]);
-      alert(`Successfully added "${trimmed}" to all subjects with unified medium codes!`);
       setNewSchoolNameModal("");
       setShowAddToAllModal(false);
+      setHasUnsavedChanges(false);
       router.refresh();
     } catch (err: any) {
       alert(`Failed to add school: ${err.message || "Unknown error"}`);
@@ -312,7 +231,6 @@ export function SchoolAccessManager({
       setIsAddingToAll(false);
     }
   };
-
 
   // Delete school from all categories
   const handleDeleteSchoolFromAll = async (schoolName: string) => {
@@ -385,8 +303,8 @@ export function SchoolAccessManager({
     setIsImporting(true);
     try {
       const res = await importSelectedSchools(competitionId, Array.from(selectedCandidateNames));
-      alert(`Successfully added ${res.count} school entries across all subjects!`);
       setShowSyncModal(false);
+      setHasUnsavedChanges(false);
       router.refresh();
     } catch (e: any) {
       alert(`Failed to import schools: ${e.message || "Unknown error"}`);
@@ -407,8 +325,8 @@ export function SchoolAccessManager({
     return visibleCandidates.map(c => c.schoolName);
   }, [visibleCandidates]);
 
-  // Save changes
-  const saveCurrentAccesses = async (onlyCurrentSubject: boolean = true) => {
+  // Save changes across all subjects and schools
+  const saveAllChanges = async () => {
     if (duplicateErrors.length > 0) {
       alert(`Cannot save: Duplicate access code issues found:\n- ${duplicateErrors.join("\n- ")}`);
       return;
@@ -416,14 +334,9 @@ export function SchoolAccessManager({
 
     setIsSaving(true);
     try {
-      if (onlyCurrentSubject && activeSubjectGroup) {
-        const catIds = new Set(activeSubjectGroup.categoryIds);
-        const subAccesses = accesses.filter(a => a.categoryId && catIds.has(a.categoryId));
-        await saveSchoolAccesses(competitionId, subAccesses, activeSubjectGroup.categoryIds[0]);
-      } else {
-        await saveSchoolAccesses(competitionId, accesses, null);
-      }
-      alert("Access codes saved successfully!");
+      await saveSchoolAccesses(competitionId, accesses, null);
+      setHasUnsavedChanges(false);
+      alert("All access codes saved successfully!");
       router.refresh();
     } catch (e: any) {
       alert(`Failed to save access codes: ${e.message || "Unknown error"}`);
@@ -433,58 +346,30 @@ export function SchoolAccessManager({
   };
 
   // Export codes to clipboard
-  const copyCodesToClipboard = (subjectName?: string) => {
-    let text = "";
+  const copyCodesToClipboard = () => {
+    let text = `=== Quiz Access Codes by Subject ===\n`;
+    text += `Note: One code works for all mediums in each subject.\n\n`;
 
-    if (subjectName && subjectName !== "overview") {
-      const grp = subjectGroups.find(g => g.subject.toLowerCase() === subjectName.toLowerCase());
-      if (grp) {
-        const mediumsText = grp.categories.map(c => parseCategorySubject(c.name).medium || c.name).join(" & ");
-        text = `=== ${grp.subject} Quiz Access Codes ===\n`;
-        text += `Note: Each code works for all mediums (${mediumsText})\n\n`;
-
-        const catIds = new Set(grp.categoryIds);
-        const schoolMap = new Map<string, string>();
-        for (const a of accesses) {
-          if (a.categoryId && catIds.has(a.categoryId)) {
-            const sName = a.schoolName?.trim();
-            const code = a.accessCode?.trim().toUpperCase();
-            if (sName && code && !schoolMap.has(sName)) {
-              schoolMap.set(sName, code);
-            }
+    subjectGroups.forEach(grp => {
+      const mediumsText = grp.categories.map(c => parseCategorySubject(c.name).medium || c.name).join(" & ");
+      text += `--- ${grp.subject} (${mediumsText}) ---\n`;
+      const catIds = new Set(grp.categoryIds);
+      const schoolMap = new Map<string, string>();
+      for (const a of accesses) {
+        if (a.categoryId && catIds.has(a.categoryId)) {
+          const sName = a.schoolName?.trim();
+          const code = a.accessCode?.trim().toUpperCase();
+          if (sName && code && !schoolMap.has(sName)) {
+            schoolMap.set(sName, code);
           }
         }
-
-        let idx = 1;
-        schoolMap.forEach((code, school) => {
-          text += `${idx++}. ${school}: ${code}\n`;
-        });
       }
-    } else {
-      text = `=== Quiz Access Codes by Subject ===\n`;
-      text += `Note: One code works for all mediums in each subject.\n\n`;
-
-      subjectGroups.forEach(grp => {
-        const mediumsText = grp.categories.map(c => parseCategorySubject(c.name).medium || c.name).join(" & ");
-        text += `--- ${grp.subject} (${mediumsText}) ---\n`;
-        const catIds = new Set(grp.categoryIds);
-        const schoolMap = new Map<string, string>();
-        for (const a of accesses) {
-          if (a.categoryId && catIds.has(a.categoryId)) {
-            const sName = a.schoolName?.trim();
-            const code = a.accessCode?.trim().toUpperCase();
-            if (sName && code && !schoolMap.has(sName)) {
-              schoolMap.set(sName, code);
-            }
-          }
-        }
-        let idx = 1;
-        schoolMap.forEach((code, school) => {
-          text += `${idx++}. ${school}: ${code}\n`;
-        });
-        text += `\n`;
+      let idx = 1;
+      schoolMap.forEach((code, school) => {
+        text += `${idx++}. ${school}: ${code}\n`;
       });
-    }
+      text += `\n`;
+    });
 
     navigator.clipboard.writeText(text);
     setCopiedSubject(true);
@@ -501,6 +386,13 @@ export function SchoolAccessManager({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [accesses]);
 
+  // Filter schools by search query
+  const filteredSchools = useMemo(() => {
+    if (!searchQuery.trim()) return allUniqueSchools;
+    const q = searchQuery.toLowerCase().trim();
+    return allUniqueSchools.filter(s => s.toLowerCase().includes(q));
+  }, [allUniqueSchools, searchQuery]);
+
   // PDF Export State & Handlers
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -516,15 +408,12 @@ export function SchoolAccessManager({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleExportSubjectPdf = (grp?: SubjectGroup<Category> | null) => {
-    const targetGroup = grp || activeSubjectGroup;
-    if (!targetGroup) return;
-
+  const handleExportSubjectPdf = (grp: SubjectGroup<Category>) => {
     setIsExportingPdf(true);
     setShowExportMenu(false);
     setTimeout(() => {
       try {
-        const catIds = new Set(targetGroup.categoryIds);
+        const catIds = new Set(grp.categoryIds);
         const map = new Map<string, string>();
         for (const a of accesses) {
           if (a.categoryId && catIds.has(a.categoryId)) {
@@ -542,11 +431,43 @@ export function SchoolAccessManager({
 
         exportSubjectAccessCodesPdf({
           competitionTitle,
-          subjectGroup: targetGroup,
+          subjectGroup: grp,
           schoolRows: rows,
         });
       } catch (err: any) {
         alert(`Failed to export PDF: ${err.message || "Unknown error"}`);
+      } finally {
+        setIsExportingPdf(false);
+      }
+    }, 50);
+  };
+
+  const handleExportMasterPdf = () => {
+    setIsExportingPdf(true);
+    setShowExportMenu(false);
+    setTimeout(() => {
+      try {
+        const rows = allUniqueSchools.map(schoolName => {
+          const codes: Record<string, string> = {};
+          subjectGroups.forEach(grp => {
+            const catIds = new Set(grp.categoryIds);
+            const match = accesses.find(
+              a => a.categoryId && catIds.has(a.categoryId) && a.schoolName?.trim().toLowerCase() === schoolName.toLowerCase()
+            );
+            if (match?.accessCode) {
+              codes[grp.subject] = match.accessCode;
+            }
+          });
+          return { schoolName, codes };
+        });
+
+        exportMasterAccessCodesPdf({
+          competitionTitle,
+          subjectGroups,
+          schoolRows: rows,
+        });
+      } catch (err: any) {
+        alert(`Failed to export Master PDF: ${err.message || "Unknown error"}`);
       } finally {
         setIsExportingPdf(false);
       }
@@ -558,7 +479,7 @@ export function SchoolAccessManager({
       <div className="bg-white p-6 rounded-xl border border-maroon-100 shadow-sm text-center">
         <h3 className="text-lg font-semibold text-maroon-900 mb-1">No Subjects / Categories Created</h3>
         <p className="text-sm text-gray-500">
-          Create at least one subject/category above to configure subject-specific school access codes.
+          Create at least one subject/category above to configure school access codes.
         </p>
       </div>
     );
@@ -567,14 +488,15 @@ export function SchoolAccessManager({
   return (
     <div className="bg-white p-6 rounded-xl border border-maroon-100 shadow-sm space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-maroon-100 pb-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-maroon-100 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-maroon-900">Subject-Specific School Access Codes</h2>
-          </div>
+          <h2 className="text-xl font-bold text-maroon-900">Subject-Specific School Access Codes</h2>
+          <p className="text-xs text-maroon-700/70 mt-0.5">
+            Master overview: access codes are shared across all mediums of each subject for each school.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto">
           {linkedForms.length > 0 && (
             <button
               type="button"
@@ -599,69 +521,83 @@ export function SchoolAccessManager({
           
           <button
             type="button"
-            onClick={() => copyCodesToClipboard(activeTab)}
+            onClick={copyCodesToClipboard}
             className="px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-100 border border-gray-200 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             {copiedSubject ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-            {copiedSubject ? "Copied to Clipboard!" : "Copy Codes"}
+            {copiedSubject ? "Copied!" : "Copy Codes"}
           </button>
 
-          {/* Export PDF Button: Subject-wise only */}
-          {activeSubjectGroup ? (
+          {/* Export PDF Button Dropdown */}
+          <div className="relative" ref={exportMenuRef}>
             <button
               type="button"
-              onClick={() => handleExportSubjectPdf(activeSubjectGroup)}
+              onClick={() => setShowExportMenu(prev => !prev)}
               disabled={isExportingPdf}
               className="px-3 py-1.5 bg-maroon-800 text-white rounded-lg text-xs font-semibold hover:bg-maroon-900 border border-maroon-900 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
-              title={`Export ${activeSubjectGroup.subject} access codes as PDF`}
+              title="Export Access Codes as PDF"
             >
               {isExportingPdf ? (
                 <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <FileDown className="w-3.5 h-3.5" />
               )}
-              <span>{isExportingPdf ? "Exporting..." : `Export ${activeSubjectGroup.subject} PDF`}</span>
+              <span>{isExportingPdf ? "Exporting..." : "Export PDF"}</span>
+              <ChevronDown className="w-3 h-3 opacity-80" />
             </button>
-          ) : (
-            subjectGroups.length > 0 && (
-              <div className="relative" ref={exportMenuRef}>
+
+            {showExportMenu && (
+              <div className="absolute right-0 mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-30 text-left">
                 <button
                   type="button"
-                  onClick={() => setShowExportMenu(prev => !prev)}
-                  disabled={isExportingPdf}
-                  className="px-3 py-1.5 bg-maroon-800 text-white rounded-lg text-xs font-semibold hover:bg-maroon-900 border border-maroon-900 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
-                  title="Export Subject Access Codes as PDF"
+                  onClick={handleExportMasterPdf}
+                  className="w-full px-3 py-2 text-left text-xs text-maroon-900 font-bold hover:bg-maroon-50 flex items-center gap-2 transition-colors cursor-pointer border-b border-gray-100"
                 >
-                  {isExportingPdf ? (
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <FileDown className="w-3.5 h-3.5" />
-                  )}
-                  <span>{isExportingPdf ? "Exporting..." : "Export PDF"}</span>
-                  <ChevronDown className="w-3 h-3 opacity-80" />
+                  <FileText className="w-3.5 h-3.5 text-maroon-700 shrink-0" />
+                  <span>Master PDF (All Subjects)</span>
                 </button>
 
-                {showExportMenu && (
-                  <div className="absolute right-0 mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-30 text-left">
-                    <div className="px-3 py-1 border-b border-gray-100 mb-1">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Select Subject to Export</p>
-                    </div>
-                    {subjectGroups.map(grp => (
-                      <button
-                        key={grp.subject}
-                        type="button"
-                        onClick={() => handleExportSubjectPdf(grp)}
-                        className="w-full px-3 py-2 text-left text-xs text-gray-800 hover:bg-maroon-50 hover:text-maroon-900 flex items-center gap-2 transition-colors cursor-pointer"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-maroon-700 shrink-0" />
-                        <span className="font-medium text-gray-900">{grp.subject}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="px-3 py-1 mt-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Subject-Specific PDFs</p>
+                </div>
+                {subjectGroups.map(grp => (
+                  <button
+                    key={grp.subject}
+                    type="button"
+                    onClick={() => handleExportSubjectPdf(grp)}
+                    className="w-full px-3 py-1.5 text-left text-xs text-gray-800 hover:bg-maroon-50 hover:text-maroon-900 flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <span className="font-medium text-gray-900">{grp.subject}</span>
+                  </button>
+                ))}
               </div>
-            )
-          )}
+            )}
+          </div>
+
+          {/* Save All Changes Button */}
+          <button
+            type="button"
+            onClick={saveAllChanges}
+            disabled={isSaving || duplicateErrors.length > 0}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 ${
+              hasUnsavedChanges
+                ? "bg-amber-600 hover:bg-amber-700 text-white animate-pulse"
+                : "bg-maroon-900 hover:bg-black text-white"
+            }`}
+          >
+            {isSaving ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5" />
+                <span>{hasUnsavedChanges ? "Save Changes *" : "Save Changes"}</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -679,6 +615,33 @@ export function SchoolAccessManager({
           </ul>
         </div>
       )}
+
+      {/* Search & Summary Bar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="relative w-full sm:w-72">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search school name..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-8 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-maroon-600 focus:outline-none transition-colors"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="text-xs text-gray-500 font-medium">
+          Showing <span className="font-bold text-maroon-900">{filteredSchools.length}</span> of {allUniqueSchools.length} schools
+        </div>
+      </div>
 
       {/* Modal: Add school to all subjects */}
       {showAddToAllModal && (
@@ -914,261 +877,135 @@ export function SchoolAccessManager({
         </div>
       )}
 
-      {/* Subject Tabs */}
-      <div className="flex items-center gap-2 flex-wrap border-b border-gray-100 pb-3">
-        <button
-          type="button"
-          onClick={() => setActiveTab("overview")}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center cursor-pointer ${
-            activeTab === "overview"
-              ? "bg-maroon-800 text-white shadow-sm"
-              : "bg-gray-50 text-gray-600 hover:bg-maroon-50 hover:text-maroon-800 border border-gray-200"
-          }`}
-        >
-          <span>All</span>
-        </button>
-
-        {subjectGroups.map(grp => {
-          const catIds = new Set(grp.categoryIds);
-          // Count unique schools in this subject
-          const schoolSet = new Set<string>();
-          for (const a of accesses) {
-            if (a.categoryId && catIds.has(a.categoryId) && a.schoolName?.trim()) {
-              schoolSet.add(a.schoolName.trim().toLowerCase());
-            }
-          }
-          const count = schoolSet.size;
-          const isActive = activeTab.toLowerCase() === grp.subject.toLowerCase();
-          const mediumsText = grp.categories.map(c => parseCategorySubject(c.name).medium || c.name).join(", ");
-
-          return (
-            <button
-              key={grp.subject}
-              type="button"
-              onClick={() => setActiveTab(grp.subject)}
-              title={`Manage ${grp.subject} access codes (${mediumsText})`}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
-                isActive 
-                  ? "bg-maroon-800 text-white shadow-sm" 
-                  : "bg-gray-50 text-gray-600 hover:bg-maroon-50 hover:text-maroon-800 border border-gray-200"
-              }`}
-            >
-              <span>{grp.subject}</span>
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-maroon-700 text-white" : "bg-gray-200 text-gray-700"}`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Active Subject Table View */}
-      {activeTab !== "overview" && activeSubjectGroup && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-maroon-50/50 p-4 rounded-xl border border-maroon-100">
-            <div>
-              <h3 className="text-lg font-bold text-maroon-900">{activeSubjectGroup.subject}</h3>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleExportSubjectPdf(activeSubjectGroup)}
-                disabled={isExportingPdf}
-                className="px-3 py-1.5 bg-white text-maroon-800 rounded-lg text-xs font-semibold hover:bg-maroon-100/50 border border-maroon-200 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
-                title={`Export ${activeSubjectGroup.subject} codes as PDF`}
-              >
-                {isExportingPdf ? (
-                  <div className="w-3.5 h-3.5 border-2 border-maroon-800 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <FileDown className="w-3.5 h-3.5" />
-                )}
-                <span>Export PDF</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => copyCodesToClipboard(activeSubjectGroup.subject)}
-                className="px-3 py-1.5 bg-white text-maroon-800 rounded-lg text-xs font-semibold hover:bg-maroon-100/50 border border-maroon-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                {copiedSubject ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>Copy {activeSubjectGroup.subject} Codes</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-maroon-50 text-maroon-900 text-xs font-semibold border-b border-maroon-200">
-                  <th className="p-3 w-12 text-center">#</th>
-                  <th className="p-3">School Name</th>
-                  <th className="p-3 w-72">
-                    Access Code for {activeSubjectGroup.subject}
-                    <span className="block text-[10px] font-normal text-maroon-600">
-                      Shared across all mediums
-                    </span>
+      {/* Master Overview Matrix Table */}
+      <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-xs">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr className="bg-maroon-900 text-white font-semibold">
+              <th className="p-3 w-12 text-center border-r border-maroon-800">#</th>
+              <th className="p-3 border-r border-maroon-800 min-w-[220px]">School Name</th>
+              {subjectGroups.map(grp => {
+                const mediums = grp.categories.map(c => parseCategorySubject(c.name).medium || c.name);
+                return (
+                  <th key={grp.subject} className="p-3 border-r border-maroon-800 text-center min-w-[150px]">
+                    <div className="font-bold text-xs">{grp.subject}</div>
+                    <div className="text-[10px] font-normal text-maroon-200 mt-0.5">
+                      {mediums.join(" / ")}
+                    </div>
                   </th>
-                  <th className="p-3 w-28 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {activeSubjectSchoolRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="text-center text-gray-400 py-8 text-sm">
-                      No schools configured for {activeSubjectGroup.subject} yet. Click "+ Add School" below to get started.
-                    </td>
-                  </tr>
-                ) : (
-                  activeSubjectSchoolRows.map((row, idx) => {
-                    const isDup = duplicateErrors.some(e => e.includes(`"${row.accessCode}"`));
+                );
+              })}
+              <th className="p-3 text-right w-16">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {filteredSchools.length === 0 ? (
+              <tr>
+                <td colSpan={subjectGroups.length + 3} className="p-8 text-center text-gray-400">
+                  {searchQuery ? `No schools match "${searchQuery}".` : "No schools configured yet. Click 'Add School to All Subjects' or 'Sync from Registrations' above."}
+                </td>
+              </tr>
+            ) : (
+              filteredSchools.map((schoolName, idx) => (
+                <tr key={schoolName} className="hover:bg-maroon-50/30 transition-colors">
+                  <td className="p-3 text-center text-xs text-gray-400 font-mono border-r border-gray-200">
+                    {idx + 1}
+                  </td>
+                  <td className="p-3 font-semibold text-gray-900 border-r border-gray-200">
+                    {schoolName}
+                  </td>
+                  {subjectGroups.map(grp => {
+                    const catIds = new Set(grp.categoryIds);
+                    const match = accesses.find(
+                      a => a.categoryId && catIds.has(a.categoryId) && a.schoolName?.trim().toLowerCase() === schoolName.toLowerCase()
+                    );
+                    const code = match?.accessCode?.toUpperCase() || "";
+                    const isDup = code && duplicateErrors.some(e => e.includes(`"${code}"`));
+
                     return (
-                      <tr key={row.schoolName || idx} className="hover:bg-gray-50/60 transition-colors">
-                        <td className="p-3 text-center text-xs text-gray-400 font-mono">
-                          {idx + 1}
-                        </td>
-                        <td className="p-3 font-medium text-gray-900 text-sm">
-                          {row.schoolName || (
-                            <span className="italic text-gray-400">Unnamed School</span>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={row.accessCode}
-                              onChange={e => updateSchoolSubjectCode(row.schoolName, e.target.value)}
-                              className={`w-full px-3 py-2 border rounded-lg text-sm font-mono tracking-wider uppercase font-bold ${
-                                isDup 
-                                  ? "border-red-400 bg-red-50 text-red-900" 
-                                  : "border-gray-300 text-maroon-900 bg-white"
-                              }`}
-                            />
-                            <button
-                              type="button"
-                              title="Regenerate random unique code"
-                              onClick={() => regenerateSchoolSubjectCode(row.schoolName)}
-                              className="p-2 text-gray-500 hover:text-maroon-800 hover:bg-maroon-50 rounded-lg border border-gray-200 transition-colors cursor-pointer"
-                            >
-                              <RotateCw className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="p-3 text-right">
+                      <td key={grp.subject} className="p-2.5 text-center border-r border-gray-200">
+                        <div className="inline-flex items-center gap-1 justify-center">
+                          <input
+                            type="text"
+                            value={code}
+                            placeholder="—"
+                            onChange={e => updateSchoolSubjectCode(schoolName, grp.categoryIds, e.target.value)}
+                            className={`w-24 px-2 py-1 text-center font-mono font-bold text-xs uppercase border rounded-lg transition-colors ${
+                              isDup 
+                                ? "border-red-400 bg-red-50 text-red-900" 
+                                : code 
+                                  ? "border-maroon-200 bg-maroon-50/60 text-maroon-900 focus:bg-white focus:border-maroon-600 focus:ring-1 focus:ring-maroon-600 focus:outline-none" 
+                                  : "border-gray-200 bg-gray-50 text-gray-400 focus:bg-white focus:border-maroon-600 focus:outline-none"
+                            }`}
+                          />
                           <button
                             type="button"
-                            onClick={() => removeSchoolFromCurrentSubject(row.schoolName)}
-                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                            title={`Remove from ${activeSubjectGroup.subject}`}
+                            title={`Regenerate unique code for ${grp.subject}`}
+                            onClick={() => regenerateSchoolSubjectCode(schoolName, grp.categoryIds)}
+                            className="p-1.5 text-gray-400 hover:text-maroon-800 hover:bg-maroon-50 rounded-lg transition-colors cursor-pointer"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <RotateCw className="w-3.5 h-3.5" />
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3">
-            <button
-              type="button"
-              onClick={addSchoolToCurrentSubject}
-              className="px-4 py-2 border-2 border-dashed border-maroon-300 text-maroon-800 rounded-xl hover:bg-maroon-50 text-xs font-bold flex items-center gap-2 w-full sm:w-auto justify-center transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              Add School to {activeSubjectGroup.subject}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => saveCurrentAccesses(true)}
-              disabled={isSaving || duplicateErrors.length > 0}
-              className="px-6 py-2.5 bg-maroon-800 text-white rounded-xl hover:bg-maroon-900 text-sm font-bold shadow-md shadow-maroon-800/20 disabled:opacity-50 w-full sm:w-auto cursor-pointer"
-            >
-              {isSaving ? "Saving..." : `Save ${activeSubjectGroup.subject} Codes`}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* All Subjects Overview Matrix */}
-      {activeTab === "overview" && (
-        <div className="space-y-4">
-          <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-xs">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-maroon-900 text-white font-semibold">
-                  <th className="p-3 border-r border-maroon-800 min-w-[200px]">School Name</th>
-                  {subjectGroups.map(grp => {
-                    const mediums = grp.categories.map(c => parseCategorySubject(c.name).medium || c.name);
-                    return (
-                      <th key={grp.subject} className="p-3 border-r border-maroon-800 text-center min-w-[130px]">
-                        <div>{grp.subject}</div>
-                        <div className="text-[10px] font-normal text-maroon-200 mt-0.5">
-                          {mediums.join(" / ")}
                         </div>
-                      </th>
+                      </td>
                     );
                   })}
-                  <th className="p-3 text-right w-20">Actions</th>
+                  <td className="p-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSchoolFromAll(schoolName)}
+                      disabled={deletingSchoolName === schoolName}
+                      className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center justify-center"
+                      title={`Delete "${schoolName}" from all subjects`}
+                    >
+                      {deletingSchoolName === schoolName ? (
+                        <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {allUniqueSchools.length === 0 ? (
-                  <tr>
-                    <td colSpan={subjectGroups.length + 2} className="p-8 text-center text-gray-400">
-                      No schools configured yet. Add schools via any subject tab above or click "Sync from Registrations".
-                    </td>
-                  </tr>
-                ) : (
-                  allUniqueSchools.map((schoolName, idx) => (
-                    <tr key={idx} className="hover:bg-maroon-50/30 transition-colors">
-                      <td className="p-3 font-semibold text-gray-900 border-r border-gray-200">
-                        {schoolName}
-                      </td>
-                      {subjectGroups.map(grp => {
-                        const catIds = new Set(grp.categoryIds);
-                        const match = accesses.find(
-                          a => a.categoryId && catIds.has(a.categoryId) && a.schoolName?.trim().toLowerCase() === schoolName.toLowerCase()
-                        );
-                        return (
-                          <td key={grp.subject} className="p-3 text-center border-r border-gray-200 font-mono">
-                            {match?.accessCode ? (
-                              <span className="inline-flex items-center px-2.5 py-1 bg-maroon-50 text-maroon-900 rounded-md font-bold border border-maroon-200 tracking-wider">
-                                {match.accessCode}
-                              </span>
-                            ) : (
-                              <span className="text-gray-300 italic text-[11px]">—</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                      <td className="p-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSchoolFromAll(schoolName)}
-                          disabled={deletingSchoolName === schoolName}
-                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center justify-center"
-                          title={`Delete ${schoolName} from all subjects`}
-                        >
-                          {deletingSchoolName === schoolName ? (
-                            <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Bottom Footer Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
+        <button
+          type="button"
+          onClick={() => setShowAddToAllModal(true)}
+          className="px-4 py-2 border-2 border-dashed border-maroon-300 text-maroon-800 rounded-xl hover:bg-maroon-50 text-xs font-bold flex items-center gap-2 w-full sm:w-auto justify-center transition-colors cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          Add Another School
+        </button>
+
+        <button
+          type="button"
+          onClick={saveAllChanges}
+          disabled={isSaving || duplicateErrors.length > 0}
+          className={`px-6 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all w-full sm:w-auto cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 ${
+            hasUnsavedChanges
+              ? "bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20 animate-pulse"
+              : "bg-maroon-800 hover:bg-maroon-900 text-white shadow-maroon-800/20"
+          }`}
+        >
+          {isSaving ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Saving Changes...</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              <span>{hasUnsavedChanges ? "Save All Changes *" : "Save All Changes"}</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

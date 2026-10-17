@@ -29,7 +29,7 @@ function SortableMilestone({ id, item, editingId, setEditingId, handleUpdate, ha
           <input type="text" name="title" defaultValue={item.title} required className="px-3 py-2 border rounded-lg" />
           <textarea name="description" defaultValue={item.description} required rows={2} className="px-3 py-2 border rounded-lg md:col-span-2" />
           <div className="flex gap-2">
-            <button type="submit" className="bg-maroon-700 text-white px-4 py-2 rounded-lg text-sm">Save</button>
+            <button type="submit" className="bg-maroon-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-maroon-900 transition-colors">Save</button>
             <button type="button" onClick={() => setEditingId(null)} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg text-sm">Cancel</button>
           </div>
         </form>
@@ -135,7 +135,7 @@ export function MilestoneManager({ initialData = [] }: { initialData: any[] }) {
           <textarea name="description" required rows={2} className="w-full px-3 py-2 border rounded-lg" />
         </div>
         <div className="md:col-span-2 flex justify-end mt-2">
-          <button type="submit" className="bg-maroon-700 text-white px-6 py-2 rounded-lg font-medium hover:bg-maroon-800">Add Milestone</button>
+          <button type="submit" className="bg-maroon-800 text-white px-6 py-2 rounded-lg font-medium hover:bg-maroon-900 transition-colors">Add Milestone</button>
         </div>
       </form>
 

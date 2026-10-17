@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 
 import Image from "next/image";
+import type { InstagramPost } from "@/lib/instagram";
 
 const InstagramIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -24,13 +25,13 @@ const XIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 );
 
-export function InstagramSliderClient({ posts }: { posts: any[] }) {
+export function InstagramSliderClient({ posts }: { posts: InstagramPost[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   
   // Modal state
-  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null);
 
   const checkScroll = () => {
     if (scrollRef.current) {

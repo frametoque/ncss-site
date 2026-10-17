@@ -2,20 +2,16 @@ import Prism from "prismjs";
 
 // Ensure globalThis.Prism exists so Prism components can attach themselves safely
 if (typeof globalThis !== "undefined") {
-  (globalThis as any).Prism = Prism;
+  (globalThis as typeof globalThis & { Prism: typeof Prism }).Prism = Prism;
 }
 
-// Load necessary language components in proper dependency order
-try {
-  require("prismjs/components/prism-markup");
-  require("prismjs/components/prism-css");
-  require("prismjs/components/prism-python");
-  require("prismjs/components/prism-markup-templating");
-  require("prismjs/components/prism-php");
-  require("prismjs/components/prism-sql");
-} catch (e) {
-  // Graceful fallback if any component fails
-}
+// Load necessary language components in proper dependency order via ES imports
+import "prismjs/components/prism-markup";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-markup-templating";
+import "prismjs/components/prism-php";
+import "prismjs/components/prism-sql";
 
 export function escapeHtml(text: string): string {
   return text
@@ -57,7 +53,7 @@ export function highlightCode(code: string, language?: string): string {
     if (grammar) {
       return Prism.highlight(code, grammar, id);
     }
-  } catch (err) {
+  } catch {
     // Fallback to escaped HTML
   }
 

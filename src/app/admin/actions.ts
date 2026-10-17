@@ -3,6 +3,7 @@
 import pool from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { uploadFile, deleteFile, getUniqueKey } from "@/lib/storage";
+import { requireAdminSession } from "@/lib/auth";
 
 async function deleteOldBlob(url: string | null | undefined) {
   if (!url) return;
@@ -21,13 +22,15 @@ async function handleFileUpload(file: any, folder: string = 'uploads'): Promise<
   if (!file || typeof file === "string" || file.size === 0) return typeof file === "string" && file ? file : null;
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const originalName = file.name || 'file';
-  const key = await getUniqueKey(`${folder}/${originalName}`);
+  const rawName = (file.name || 'file').replace(/[^\w.-]/g, '_');
+  const safeName = rawName.replace(/^\.+/, '') || 'file';
+  const key = await getUniqueKey(`${folder}/${safeName}`);
   return await uploadFile(key, buffer, file.type || 'application/octet-stream');
 }
 
 // Posts
 export async function createPost(data: Record<string, any>) {
+  await requireAdminSession();
   const coverImage = await handleFileUpload(data.coverImage, 'news');
   
   // Calculate reading time automatically
@@ -45,6 +48,7 @@ export async function createPost(data: Record<string, any>) {
 }
 
 export async function updatePost(id: string, data: Record<string, any>) {
+  await requireAdminSession();
   const oldRes = await pool.query('SELECT "coverImage" FROM "post" WHERE id = $1', [id]);
   const coverImage = await handleFileUpload(data.coverImage, 'news');
   if (coverImage && oldRes.rows[0] && coverImage !== oldRes.rows[0].coverImage) await deleteOldBlob(oldRes.rows[0].coverImage);
@@ -64,6 +68,7 @@ export async function updatePost(id: string, data: Record<string, any>) {
 }
 
 export async function deletePost(id: string) {
+  await requireAdminSession();
   const oldRes = await pool.query('SELECT "coverImage" FROM "post" WHERE id = $1', [id]);
   if (oldRes.rows[0]) await deleteOldBlob(oldRes.rows[0].coverImage);
   await pool.query('DELETE FROM "post" WHERE id = $1', [id]);
@@ -74,6 +79,7 @@ export async function deletePost(id: string) {
 
 // Magazines
 export async function createMagazine(data: Record<string, any>) {
+  await requireAdminSession();
   const coverThumbnail = await handleFileUpload(data.coverThumbnail, 'magazine');
   const outNowImage = await handleFileUpload(data.outNowImage, 'magazine');
   const pdfUrl = await handleFileUpload(data.pdfUrl, 'magazine');
@@ -92,6 +98,7 @@ export async function createMagazine(data: Record<string, any>) {
 }
 
 export async function updateMagazine(id: string, data: Record<string, any>) {
+  await requireAdminSession();
   const oldRes = await pool.query('SELECT "coverThumbnail", "outNowImage", "pdfUrl" FROM "magazine" WHERE id = $1', [id]);
   const coverThumbnail = await handleFileUpload(data.coverThumbnail, 'magazine');
   const outNowImage = await handleFileUpload(data.outNowImage, 'magazine');
@@ -118,6 +125,7 @@ export async function updateMagazine(id: string, data: Record<string, any>) {
 }
 
 export async function deleteMagazine(id: string) {
+  await requireAdminSession();
   const oldRes = await pool.query('SELECT "coverThumbnail", "outNowImage", "pdfUrl" FROM "magazine" WHERE id = $1', [id]);
   if (oldRes.rows[0]) {
     await deleteOldBlob(oldRes.rows[0].coverThumbnail);
@@ -131,6 +139,7 @@ export async function deleteMagazine(id: string) {
 
 // Competitions
 export async function createCompetition(data: Record<string, any>) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -155,6 +164,7 @@ export async function createCompetition(data: Record<string, any>) {
 }
 
 export async function updateCompetition(id: string, data: Record<string, any>) {
+  await requireAdminSession();
   await pool.query(
     'UPDATE "competition" SET slug = $1, title = $2, description = $3, "isEnded" = $4, "isQuiz" = $5, date = $6, time = $7, location = $8, deadline = $9, content = $10, "coverImage" = COALESCE($11, "coverImage"), "rulesPdf" = COALESCE($12, "rulesPdf"), "updatedAt" = now() WHERE id = $13',
     [data.slug, data.title, data.description, data.isEnded, data.isQuiz || false, data.date || null, data.time || null, data.location || null, data.deadline || null, data.content, data.coverImage || null, data.rulesPdf || null, id]
@@ -165,6 +175,7 @@ export async function updateCompetition(id: string, data: Record<string, any>) {
 }
 
 export async function deleteCompetition(id: string) {
+  await requireAdminSession();
   await pool.query('DELETE FROM "competition" WHERE id = $1', [id]);
   revalidatePath("/admin/competitions");
   revalidatePath("/competitions");
@@ -173,6 +184,7 @@ export async function deleteCompetition(id: string) {
 
 // Executive Board Members
 export async function createExecutiveBoardMember(data: Record<string, any>) {
+  await requireAdminSession();
   const photoUrl = await handleFileUpload(data.photoUrl, 'about/executive-board');
   await pool.query(
     'INSERT INTO "executiveBoard" (id, name, role, "photoUrl", "orderIndex", "contactNumber", "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, now(), now())',
@@ -184,6 +196,7 @@ export async function createExecutiveBoardMember(data: Record<string, any>) {
 }
 
 export async function updateExecutiveBoardMember(id: string, data: Record<string, any>) {
+  await requireAdminSession();
   const photoUrl = await handleFileUpload(data.photoUrl, 'about/executive-board');
   await pool.query(
     'UPDATE "executiveBoard" SET name = $1, role = $2, "photoUrl" = COALESCE($3, "photoUrl"), "contactNumber" = $4, "updatedAt" = now() WHERE id = $5',
@@ -195,12 +208,14 @@ export async function updateExecutiveBoardMember(id: string, data: Record<string
 }
 
 export async function deleteExecutiveBoardMember(id: string) {
+  await requireAdminSession();
   await pool.query('DELETE FROM "executiveBoard" WHERE id = $1', [id]);
   revalidatePath("/admin/board");
   revalidatePath("/about");
 }
 
 export async function updateBoardOrder(orderedIds: string[]) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -219,6 +234,7 @@ export async function updateBoardOrder(orderedIds: string[]) {
 }
 
 export async function updateCompetitionsOrder(orderedIds: string[]) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -241,6 +257,7 @@ export async function updateCompetitionsOrder(orderedIds: string[]) {
 
 // History
 export async function updateHistorySection(sectionKey: string, data: Record<string, any>) {
+  await requireAdminSession();
   const photoUrl = await handleFileUpload(data.photoUrl, 'about/history');
   await pool.query(
     `INSERT INTO "history" (id, "sectionKey", title, content, "photoUrl")
@@ -255,6 +272,7 @@ export async function updateHistorySection(sectionKey: string, data: Record<stri
 
 // Milestones
 export async function createMilestone(data: Record<string, any>) {
+  await requireAdminSession();
   await pool.query(
     'INSERT INTO "milestone" (id, year, title, description, "orderIndex") VALUES (gen_random_uuid()::text, $1, $2, $3, $4)',
     [data.year, data.title, data.description, data.orderIndex || 0]
@@ -264,6 +282,7 @@ export async function createMilestone(data: Record<string, any>) {
 }
 
 export async function updateMilestone(id: string, data: Record<string, any>) {
+  await requireAdminSession();
   await pool.query(
     'UPDATE "milestone" SET year = $1, title = $2, description = $3, "updatedAt" = now() WHERE id = $4',
     [data.year, data.title, data.description, id]
@@ -273,6 +292,7 @@ export async function updateMilestone(id: string, data: Record<string, any>) {
 }
 
 export async function deleteMilestone(id: string) {
+  await requireAdminSession();
   await pool.query('DELETE FROM "milestone" WHERE id = $1', [id]);
   revalidatePath("/admin/about");
   revalidatePath("/about");
@@ -280,6 +300,7 @@ export async function deleteMilestone(id: string) {
 
 // Annual Events
 export async function createAnnualEvent(data: Record<string, any>) {
+  await requireAdminSession();
   await pool.query(
     'INSERT INTO "annualEvent" (id, title, description, "orderIndex") VALUES (gen_random_uuid()::text, $1, $2, $3)',
     [data.title, data.description, data.orderIndex || 0]
@@ -289,6 +310,7 @@ export async function createAnnualEvent(data: Record<string, any>) {
 }
 
 export async function updateAnnualEvent(id: string, data: Record<string, any>) {
+  await requireAdminSession();
   await pool.query(
     'UPDATE "annualEvent" SET title = $1, description = $2, "updatedAt" = now() WHERE id = $3',
     [data.title, data.description, id]
@@ -298,6 +320,7 @@ export async function updateAnnualEvent(id: string, data: Record<string, any>) {
 }
 
 export async function deleteAnnualEvent(id: string) {
+  await requireAdminSession();
   await pool.query('DELETE FROM "annualEvent" WHERE id = $1', [id]);
   revalidatePath("/admin/about");
   revalidatePath("/about");
@@ -305,6 +328,7 @@ export async function deleteAnnualEvent(id: string) {
 
 // Photo Archive
 export async function createPhotoArchive(data: Record<string, any>) {
+  await requireAdminSession();
   const photoUrl = await handleFileUpload(data.photoUrl, 'about/photo-archive');
   if (!photoUrl) return; // Prevent empty image creations
   await pool.query(
@@ -316,12 +340,14 @@ export async function createPhotoArchive(data: Record<string, any>) {
 }
 
 export async function deletePhotoArchive(id: string) {
+  await requireAdminSession();
   await pool.query('DELETE FROM "photoArchive" WHERE id = $1', [id]);
   revalidatePath("/admin/about");
   revalidatePath("/about");
 }
 
 export async function updatePhotoArchiveOrder(orderedIds: string[]) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -340,6 +366,7 @@ export async function updatePhotoArchiveOrder(orderedIds: string[]) {
 }
 
 export async function updateMilestoneOrder(orderedIds: string[]) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

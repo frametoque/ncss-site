@@ -2,8 +2,10 @@
 
 import pool from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { requireAdminSession } from "@/lib/auth";
 
 export async function createForm(data: { title: string; description: string; competitionId: string | null; slug: string; limitOnePerEmail?: boolean }) {
+  await requireAdminSession();
   const res = await pool.query(
     'INSERT INTO "form" (id, slug, title, description, "competitionId", "isActive", "limitOnePerEmail", "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, $3, $4, true, $5, now(), now()) RETURNING id',
     [data.slug, data.title, data.description || null, data.competitionId || null, data.limitOnePerEmail ?? false]
@@ -13,6 +15,7 @@ export async function createForm(data: { title: string; description: string; com
 }
 
 export async function updateForm(id: string, data: { title: string; description: string; competitionId: string | null; slug: string; isActive: boolean; limitOnePerEmail?: boolean; successMessage?: string | null }) {
+  await requireAdminSession();
   await pool.query(
     'UPDATE "form" SET title = $1, description = $2, "competitionId" = $3, slug = $4, "isActive" = $5, "limitOnePerEmail" = $6, "successMessage" = $7, "updatedAt" = now() WHERE id = $8',
     [data.title, data.description || null, data.competitionId || null, data.slug, data.isActive, data.limitOnePerEmail ?? false, data.successMessage || null, id]
@@ -22,6 +25,7 @@ export async function updateForm(id: string, data: { title: string; description:
 }
 
 export async function deleteForm(id: string) {
+  await requireAdminSession();
   // Cascades will handle fields and submissions if set up correctly, but let's be explicit just in case
   await pool.query('DELETE FROM "formField" WHERE "formId" = $1', [id]);
   await pool.query('DELETE FROM "formSubmission" WHERE "formId" = $1', [id]);
@@ -30,6 +34,7 @@ export async function deleteForm(id: string) {
 }
 
 export async function saveFormFields(formId: string, fields: any[]) {
+  await requireAdminSession();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -66,6 +71,7 @@ export async function saveFormFields(formId: string, fields: any[]) {
 }
 
 export async function deleteSubmission(formId: string, submissionId: string) {
+  await requireAdminSession();
   await pool.query('DELETE FROM "formSubmission" WHERE id = $1', [submissionId]);
   revalidatePath(`/admin/forms/${formId}/submissions`);
 }

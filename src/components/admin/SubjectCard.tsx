@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Trash2, Loader2, Check, X, FileText } from "lucide-react";
+import { Plus, Trash2, Loader2, Check, X, FileText, BookOpen } from "lucide-react";
 import { parseCategorySubject } from "@/lib/quizSubjects";
 import { 
   addMediumToSubject, 
   deleteQuizCategory, 
   deleteSubject,
-  getSubjectQuizSubmissionsForPdf 
+  getSubjectQuizSubmissionsForPdf,
+  getSubjectMarksheetData,
+  SubjectMarksheetData,
 } from "@/app/admin/competitions/[id]/quizzes/actions";
-import { exportQuizSubmissionsPdf } from "@/lib/quizSubmissionsPdf";
+import QuizPdfExportModal from "@/components/admin/QuizPdfExportModal";
+import SubjectMarksheetModal from "@/components/admin/SubjectMarksheetModal";
 
 interface CategoryItem {
   id: string;
@@ -42,6 +45,11 @@ export function SubjectCard({
   const [isSubmittingMedium, setIsSubmittingMedium] = useState(false);
   const [isDeletingSubject, setIsDeletingSubject] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfSubmissions, setPdfSubmissions] = useState<any[]>([]);
+  const [isMarksheetModalOpen, setIsMarksheetModalOpen] = useState(false);
+  const [marksheetData, setMarksheetData] = useState<SubjectMarksheetData | null>(null);
+  const [isLoadingMarksheet, setIsLoadingMarksheet] = useState(false);
   const [deletingCatId, setDeletingCatId] = useState<string | null>(null);
 
   const existingMediumsLower = new Set(
@@ -108,25 +116,37 @@ export function SubjectCard({
     }
   }
 
-  async function handleExportPdf() {
+  async function handleOpenPdfModal() {
     try {
       setIsExportingPdf(true);
       const catIds = categories.map(c => c.id);
       const subs = await getSubjectQuizSubmissionsForPdf(catIds);
-      const res = exportQuizSubmissionsPdf({
-        competitionTitle,
-        subjectName: subject,
-        mediumFilter: "ALL",
-        submissions: subs,
-      });
-      if (!res.success) {
-        alert(res.error || "Failed to export PDF.");
+      if (!subs || subs.length === 0) {
+        alert("No genuine submissions found for this subject.");
+        return;
       }
+      setPdfSubmissions(subs);
+      setIsPdfModalOpen(true);
     } catch (err: any) {
       console.error("PDF export error:", err);
-      alert(`Failed to export PDF: ${err?.message || "Unknown error"}`);
+      alert(`Failed to load submissions: ${err?.message || "Unknown error"}`);
     } finally {
       setIsExportingPdf(false);
+    }
+  }
+
+  async function handleOpenMarksheetModal() {
+    try {
+      setIsLoadingMarksheet(true);
+      const catIds = categories.map(c => c.id);
+      const data = await getSubjectMarksheetData(competitionId, catIds);
+      setMarksheetData(data);
+      setIsMarksheetModalOpen(true);
+    } catch (err: any) {
+      console.error("Marksheet load error:", err);
+      alert(`Failed to load marksheet: ${err?.message || "Unknown error"}`);
+    } finally {
+      setIsLoadingMarksheet(false);
     }
   }
 
@@ -302,48 +322,87 @@ export function SubjectCard({
         </div>
       </div>
 
-      {/* Card Footer: View Submissions & Delete Subject */}
-      <div className="flex items-center gap-2 pt-3 border-t border-maroon-50">
-        <Link
-          href={`/admin/competitions/${competitionId}/quizzes/${categories[0].id}/submissions`}
-          className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-maroon-800 text-white hover:bg-maroon-900 rounded-xl text-xs font-bold transition-all shadow-xs"
-        >
-          <span>View Submissions</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
-            {totalSubmissions}
-          </span>
-        </Link>
+      {/* Card Footer: View Submissions & Action Exports */}
+      <div className="pt-3 border-t border-maroon-50 space-y-2">
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/admin/competitions/${competitionId}/quizzes/${categories[0].id}/submissions`}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-maroon-800 text-white hover:bg-maroon-900 rounded-xl text-xs font-bold transition-all shadow-xs"
+          >
+            <span>View Submissions</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
+              {totalSubmissions}
+            </span>
+          </Link>
 
-        {totalSubmissions > 0 && (
           <button
             type="button"
-            onClick={handleExportPdf}
-            disabled={isExportingPdf}
-            className="p-2 bg-maroon-50 text-maroon-800 hover:bg-maroon-100 border border-maroon-200 rounded-xl transition-colors flex items-center justify-center cursor-pointer disabled:opacity-50 shadow-xs"
-            title={`Export ${subject} submissions as PDF (excludes TEST users)`}
+            onClick={handleDeleteEntireSubject}
+            disabled={isDeletingSubject}
+            className="p-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 rounded-xl transition-colors flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-50 shadow-xs"
+            title={`Delete entire ${subject} subject`}
           >
-            {isExportingPdf ? (
-              <Loader2 className="w-4 h-4 animate-spin text-maroon-800" />
+            {isDeletingSubject ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <FileText className="w-4 h-4 text-maroon-800" />
+              <Trash2 className="w-4 h-4" />
             )}
           </button>
-        )}
+        </div>
 
-        <button
-          type="button"
-          onClick={handleDeleteEntireSubject}
-          disabled={isDeletingSubject}
-          className="p-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 rounded-xl transition-colors flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-50 shadow-xs"
-          title={`Delete entire ${subject} subject`}
-        >
-          {isDeletingSubject ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Trash2 className="w-4 h-4" />
+        <div className="flex items-center gap-2">
+          {totalSubmissions > 0 && (
+            <button
+              type="button"
+              onClick={handleOpenPdfModal}
+              disabled={isExportingPdf}
+              className="flex-1 py-1.5 px-2 bg-maroon-50 text-maroon-800 hover:bg-maroon-100 border border-maroon-200 rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs text-xs font-semibold"
+              title={`Export ${subject} leaderboard PDF`}
+            >
+              {isExportingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-maroon-800" />
+              ) : (
+                <FileText className="w-3.5 h-3.5 text-maroon-800" />
+              )}
+              <span>Export Results</span>
+            </button>
           )}
-        </button>
+
+          <button
+            type="button"
+            onClick={handleOpenMarksheetModal}
+            disabled={isLoadingMarksheet}
+            className="flex-1 py-1.5 px-2 bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs text-xs font-semibold"
+            title={`Export ${subject} answers`}
+          >
+            {isLoadingMarksheet ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-800" />
+            ) : (
+              <BookOpen className="w-3.5 h-3.5 text-amber-800" />
+            )}
+            <span>Export Answers</span>
+          </button>
+        </div>
       </div>
+
+      {/* PDF Export Options Modal */}
+      <QuizPdfExportModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        competitionTitle={competitionTitle}
+        subjectName={subject}
+        mediumFilter="ALL"
+        submissions={pdfSubmissions}
+      />
+
+      {/* Marksheet & Question Paper Modal */}
+      <SubjectMarksheetModal
+        isOpen={isMarksheetModalOpen}
+        onClose={() => setIsMarksheetModalOpen(false)}
+        data={marksheetData}
+        isLoading={isLoadingMarksheet}
+        competitionId={competitionId}
+      />
     </div>
   );
 }
