@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { CheckCircle2, XCircle, MinusCircle, Download, Search, Filter } from "lucide-react";
+import { CheckCircle2, XCircle, MinusCircle, Download, Search, FileText, Loader2 } from "lucide-react";
+import { exportQuizSubmissionsPdf, formatMediumLabel } from "@/lib/quizSubmissionsPdf";
 
 export interface SubmissionRow {
   id: string;
@@ -24,11 +25,17 @@ export interface SubmissionRow {
 interface QuizSubmissionsTableProps {
   submissions: SubmissionRow[];
   subjectName: string;
+  competitionTitle?: string;
 }
 
-export function QuizSubmissionsTable({ submissions, subjectName }: QuizSubmissionsTableProps) {
+export function QuizSubmissionsTable({ 
+  submissions, 
+  subjectName,
+  competitionTitle = "Competition"
+}: QuizSubmissionsTableProps) {
   const [selectedMedium, setSelectedMedium] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
   // Extract unique mediums
   const availableMediums = useMemo(() => {
@@ -48,29 +55,60 @@ export function QuizSubmissionsTable({ submissions, subjectName }: QuizSubmissio
     return map;
   }, [submissions, availableMediums]);
 
-  // Filtered and sorted
+  // Assign actual overall rank (1, 2, 3...) across ALL mediums in the competition
+  const overallRankedSubmissions = useMemo(() => {
+    return submissions.map((sub, idx) => ({
+      ...sub,
+      actualRank: idx + 1,
+    }));
+  }, [submissions]);
+
+  // Filtered by selected medium and search query (retaining their true overall rank)
   const filteredSubmissions = useMemo(() => {
-    return submissions.filter(sub => {
+    return overallRankedSubmissions.filter(sub => {
       const matchesMedium = selectedMedium === "ALL" || sub.medium === selectedMedium;
-      const matchesSearch = !searchQuery.trim() || sub.schoolName.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !searchQuery.trim() || sub.schoolName.toLowerCase().includes(searchQuery.toLowerCase().trim());
       return matchesMedium && matchesSearch;
     });
-  }, [submissions, selectedMedium, searchQuery]);
+  }, [overallRankedSubmissions, selectedMedium, searchQuery]);
+
+  function handleExportPdf() {
+    setIsExportingPdf(true);
+    setTimeout(() => {
+      try {
+        // exportQuizSubmissionsPdf guarantees test users are strictly excluded
+        const result = exportQuizSubmissionsPdf({
+          competitionTitle,
+          subjectName,
+          mediumFilter: selectedMedium,
+          submissions: filteredSubmissions,
+        });
+
+        if (!result.success) {
+          alert(result.error || "Failed to export PDF.");
+        }
+      } catch (err: any) {
+        console.error("PDF export error:", err);
+        alert(`Failed to export PDF: ${err?.message || "Unknown error"}`);
+      } finally {
+        setIsExportingPdf(false);
+      }
+    }, 50);
+  }
 
   function exportCSV() {
     if (filteredSubmissions.length === 0) return;
-    const headers = ["Rank", "School Name", "Medium", "Score", "Total Questions", "Percentage", "Time Saved (s)", "Submitted At"];
-    const rows = filteredSubmissions.map((sub, idx) => {
+    const headers = ["Rank", "School Name", "Medium", "Score", "Total Questions", "Percentage", "Submitted At"];
+    const rows = filteredSubmissions.map((sub) => {
       const pct = sub.totalQuestions > 0 ? Math.round((sub.score / sub.totalQuestions) * 100) : 0;
       const dateStr = new Date(sub.createdAt).toLocaleString("en-US", { timeZone: "Asia/Colombo" });
       return [
-        idx + 1,
+        sub.actualRank,
         `"${sub.schoolName.replace(/"/g, '""')}"`,
-        `"${sub.medium.replace(/"/g, '""')}"`,
+        `"${formatMediumLabel(sub.medium).replace(/"/g, '""')}"`,
         sub.score,
         sub.totalQuestions,
         `${pct}%`,
-        sub.totalTimeLeft || 0,
         `"${dateStr}"`
       ];
     });
@@ -102,10 +140,10 @@ export function QuizSubmissionsTable({ submissions, subjectName }: QuizSubmissio
 
   return (
     <div className="space-y-4">
-      {/* Controls Bar: Medium Filters & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-maroon-100 shadow-xs">
+      {/* Controls Bar: Medium Filters & Actions */}
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-maroon-100 shadow-xs">
         {/* Medium Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0">
           <button
             type="button"
             onClick={() => setSelectedMedium("ALL")}
@@ -144,9 +182,10 @@ export function QuizSubmissionsTable({ submissions, subjectName }: QuizSubmissio
           ))}
         </div>
 
-        {/* Search & Export */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 sm:w-56">
+        {/* Search, Filter Toggles & Export Actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search Input */}
+          <div className="relative flex-1 sm:w-52 min-w-[160px]">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -157,6 +196,23 @@ export function QuizSubmissionsTable({ submissions, subjectName }: QuizSubmissio
             />
           </div>
 
+          {/* Export PDF Button (Always Excludes TEST users) */}
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf || filteredSubmissions.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-maroon-800 text-white hover:bg-maroon-900 border border-maroon-900 rounded-lg text-xs font-bold cursor-pointer disabled:opacity-50 transition-all whitespace-nowrap shadow-xs hover:shadow-sm"
+            title="Export quiz submissions as branded PDF (Excludes TEST users)"
+          >
+            {isExportingPdf ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <FileText className="w-3.5 h-3.5" />
+            )}
+            <span>Export PDF</span>
+          </button>
+
+          {/* Export CSV Button */}
           <button
             type="button"
             onClick={exportCSV}
@@ -185,31 +241,31 @@ export function QuizSubmissionsTable({ submissions, subjectName }: QuizSubmissio
                   <th className="p-3 text-xs font-bold text-maroon-900 uppercase tracking-wider">School Name</th>
                   <th className="p-3 text-xs font-bold text-maroon-900 uppercase tracking-wider">Medium</th>
                   <th className="p-3 text-xs font-bold text-maroon-900 uppercase tracking-wider">Score</th>
-                  <th className="p-3 text-xs font-bold text-maroon-900 uppercase tracking-wider">Time Saved</th>
                   <th className="p-3 text-xs font-bold text-maroon-900 uppercase tracking-wider">Submitted At</th>
                   <th className="p-3 text-xs font-bold text-maroon-900 uppercase tracking-wider min-w-[280px]">Answers Breakdown</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-maroon-50">
-                {filteredSubmissions.map((sub, index) => {
-                  let rankClass = "text-gray-500 font-semibold";
-                  let rankBadge = "bg-gray-100 text-gray-700";
-                  let rankText = `${index + 1}th`;
+                {filteredSubmissions.map((sub) => {
+                  const rank = sub.actualRank;
+                  const remainder10 = rank % 10;
+                  const remainder100 = rank % 100;
+                  const rankText =
+                    remainder10 === 1 && remainder100 !== 11
+                      ? `${rank}st`
+                      : remainder10 === 2 && remainder100 !== 12
+                      ? `${rank}nd`
+                      : remainder10 === 3 && remainder100 !== 13
+                      ? `${rank}rd`
+                      : `${rank}th`;
 
-                  if (index === 0) {
-                    rankClass = "text-amber-600 font-bold";
+                  let rankBadge = "bg-gray-100 text-gray-700";
+                  if (rank === 1) {
                     rankBadge = "bg-amber-100 text-amber-900 border border-amber-300 font-bold";
-                    rankText = "1st 🏆";
-                  } else if (index === 1) {
-                    rankClass = "text-slate-600 font-bold";
+                  } else if (rank === 2) {
                     rankBadge = "bg-slate-100 text-slate-800 border border-slate-300 font-bold";
-                    rankText = "2nd 🥈";
-                  } else if (index === 2) {
-                    rankClass = "text-amber-800 font-bold";
+                  } else if (rank === 3) {
                     rankBadge = "bg-amber-50 text-amber-900 border border-amber-200 font-bold";
-                    rankText = "3rd 🥉";
-                  } else if (index === 3) {
-                    rankText = "4th";
                   }
 
                   const pct = sub.totalQuestions > 0 ? Math.round((sub.score / sub.totalQuestions) * 100) : 0;
@@ -226,7 +282,7 @@ export function QuizSubmissionsTable({ submissions, subjectName }: QuizSubmissio
                       </td>
                       <td className="p-3 text-xs">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${getMediumBadgeStyle(sub.medium)}`}>
-                          {sub.medium}
+                          {formatMediumLabel(sub.medium)}
                         </span>
                       </td>
                       <td className="p-3 text-sm text-maroon-900">
@@ -237,9 +293,6 @@ export function QuizSubmissionsTable({ submissions, subjectName }: QuizSubmissio
                             {pct}%
                           </span>
                         </div>
-                      </td>
-                      <td className="p-3 text-xs text-maroon-700 font-mono font-medium">
-                        {sub.totalTimeLeft || 0}s
                       </td>
                       <td className="p-3 text-xs text-gray-600 whitespace-nowrap">
                         {new Date(sub.createdAt).toLocaleString("en-US", { timeZone: "Asia/Colombo" })}

@@ -723,3 +723,40 @@ export async function unifySchoolAccessCodesBySubject(competitionId: string) {
   }
 }
 
+export async function getSubjectQuizSubmissionsForPdf(categoryIds: string[]) {
+  if (!categoryIds || categoryIds.length === 0) return [];
+  const [subsRes, questionsRes] = await Promise.all([
+    pool.query(`
+      SELECT qs.id, qs."categoryId", qs.score, qs."totalTimeLeft", qs."createdAt", 
+             sa."schoolName", qc.name as "categoryName"
+      FROM quiz_submission qs
+      JOIN school_access sa ON qs."schoolAccessId" = sa.id
+      JOIN quiz_category qc ON qs."categoryId" = qc.id
+      WHERE qs."categoryId" = ANY($1::text[])
+      ORDER BY qs.score DESC, qs."totalTimeLeft" DESC, qs."createdAt" ASC
+    `, [categoryIds]),
+    pool.query(
+      'SELECT "categoryId", count(*)::int as count FROM quiz_question WHERE "categoryId" = ANY($1::text[]) GROUP BY "categoryId"',
+      [categoryIds]
+    )
+  ]);
+
+  const qCountMap: Record<string, number> = {};
+  for (const q of questionsRes.rows) {
+    qCountMap[q.categoryId] = q.count;
+  }
+
+  return subsRes.rows.map(sub => {
+    const parsed = parseCategorySubject(sub.categoryName);
+    return {
+      schoolName: sub.schoolName,
+      medium: parsed.medium || sub.categoryName,
+      score: sub.score,
+      totalQuestions: qCountMap[sub.categoryId] || 0,
+      totalTimeLeft: sub.totalTimeLeft || 0,
+      createdAt: sub.createdAt ? new Date(sub.createdAt).toISOString() : new Date().toISOString()
+    };
+  });
+}
+
+

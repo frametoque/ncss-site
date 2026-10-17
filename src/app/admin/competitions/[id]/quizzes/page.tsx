@@ -112,6 +112,7 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
                 <SubjectCard
                   key={sub.subject}
                   competitionId={id}
+                  competitionTitle={competitionTitle}
                   subject={sub.subject}
                   categories={sub.categories}
                   questionCountMap={questionCountObj}

@@ -75,7 +75,7 @@ export default async function SubmissionsPage({
       score: sub.score,
       totalQuestions: catQuestions.length,
       totalTimeLeft: sub.totalTimeLeft || 0,
-      createdAt: sub.createdAt,
+      createdAt: sub.createdAt ? new Date(sub.createdAt).toISOString() : new Date().toISOString(),
       answers: sub.answers || {},
       questions: catQuestions
     };
@@ -115,6 +115,7 @@ export default async function SubmissionsPage({
       <QuizSubmissionsTable
         submissions={submissionRows}
         subjectName={subjectName}
+        competitionTitle={competition?.title || "Competition"}
       />
     </div>
   );

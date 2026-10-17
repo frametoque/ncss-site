@@ -2,9 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Trash2, Loader2, Check, X } from "lucide-react";
+import { Plus, Trash2, Loader2, Check, X, FileText } from "lucide-react";
 import { parseCategorySubject } from "@/lib/quizSubjects";
-import { addMediumToSubject, deleteQuizCategory, deleteSubject } from "@/app/admin/competitions/[id]/quizzes/actions";
+import { 
+  addMediumToSubject, 
+  deleteQuizCategory, 
+  deleteSubject,
+  getSubjectQuizSubmissionsForPdf 
+} from "@/app/admin/competitions/[id]/quizzes/actions";
+import { exportQuizSubmissionsPdf } from "@/lib/quizSubmissionsPdf";
 
 interface CategoryItem {
   id: string;
@@ -14,6 +20,7 @@ interface CategoryItem {
 
 interface SubjectCardProps {
   competitionId: string;
+  competitionTitle?: string;
   subject: string;
   categories: CategoryItem[];
   questionCountMap: Record<string, number>;
@@ -22,6 +29,7 @@ interface SubjectCardProps {
 
 export function SubjectCard({
   competitionId,
+  competitionTitle = "Competition",
   subject,
   categories,
   questionCountMap,
@@ -33,6 +41,7 @@ export function SubjectCard({
   const [timerInput, setTimerInput] = useState<number>(categories[0]?.questionTimer || 60);
   const [isSubmittingMedium, setIsSubmittingMedium] = useState(false);
   const [isDeletingSubject, setIsDeletingSubject] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [deletingCatId, setDeletingCatId] = useState<string | null>(null);
 
   const existingMediumsLower = new Set(
@@ -96,6 +105,28 @@ export function SubjectCard({
       alert("Failed to delete subject.");
     } finally {
       setIsDeletingSubject(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    try {
+      setIsExportingPdf(true);
+      const catIds = categories.map(c => c.id);
+      const subs = await getSubjectQuizSubmissionsForPdf(catIds);
+      const res = exportQuizSubmissionsPdf({
+        competitionTitle,
+        subjectName: subject,
+        mediumFilter: "ALL",
+        submissions: subs,
+      });
+      if (!res.success) {
+        alert(res.error || "Failed to export PDF.");
+      }
+    } catch (err: any) {
+      console.error("PDF export error:", err);
+      alert(`Failed to export PDF: ${err?.message || "Unknown error"}`);
+    } finally {
+      setIsExportingPdf(false);
     }
   }
 
@@ -283,19 +314,34 @@ export function SubjectCard({
           </span>
         </Link>
 
+        {totalSubmissions > 0 && (
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            className="p-2 bg-maroon-50 text-maroon-800 hover:bg-maroon-100 border border-maroon-200 rounded-xl transition-colors flex items-center justify-center cursor-pointer disabled:opacity-50 shadow-xs"
+            title={`Export ${subject} submissions as PDF (excludes TEST users)`}
+          >
+            {isExportingPdf ? (
+              <Loader2 className="w-4 h-4 animate-spin text-maroon-800" />
+            ) : (
+              <FileText className="w-4 h-4 text-maroon-800" />
+            )}
+          </button>
+        )}
+
         <button
           type="button"
           onClick={handleDeleteEntireSubject}
           disabled={isDeletingSubject}
-          className="px-2.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer shrink-0 disabled:opacity-50"
+          className="p-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 rounded-xl transition-colors flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-50 shadow-xs"
           title={`Delete entire ${subject} subject`}
         >
           {isDeletingSubject ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-4 h-4" />
           )}
-          <span className="hidden sm:inline">Delete Subject</span>
         </button>
       </div>
     </div>
